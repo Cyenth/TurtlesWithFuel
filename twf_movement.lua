@@ -1105,7 +1105,7 @@ end
 --   
 --   
 -----------------------------------------------------------------------------
-if not twf.movement.StatefulTurtle
+if not twf.movement.StatefulTurtle then
   local direction = twf.movement.direction
   local Position = twf.movement.Position
   local Vector = twf.movement.Vector
