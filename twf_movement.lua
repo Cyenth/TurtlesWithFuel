@@ -55,7 +55,7 @@ if not twf.movement.direction then
   -- one unit.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --   
   --   -- prints 1
@@ -85,7 +85,7 @@ if not twf.movement.direction then
   -- unit.
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --   
   --   -- prints 1
@@ -105,7 +105,7 @@ if not twf.movement.direction then
   -- unit.
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --   
   --   -- prints 1
@@ -126,7 +126,7 @@ if not twf.movement.direction then
   -- Returns the absolute direction that comes from going relDir in absDir. 
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints west (-x)
@@ -156,7 +156,7 @@ if not twf.movement.direction then
   -- specified absolute direction. 
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints west (-x)
@@ -176,7 +176,7 @@ if not twf.movement.direction then
   -- the specified absolute direction
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints east (+x)
@@ -195,7 +195,7 @@ if not twf.movement.direction then
   -- direction of the specified absolute direction.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   -- 
   --   -- prints south (+z)
@@ -216,7 +216,7 @@ if not twf.movement.direction then
   -- Returns if the specified direction is a valid direction
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints true
@@ -236,7 +236,7 @@ if not twf.movement.direction then
   -- Returns if the specified direction is absolute.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --   
   --   -- prints true
@@ -254,7 +254,7 @@ if not twf.movement.direction then
   -- Returns if the specified direction is relative
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --   
   --   -- prints true
@@ -275,7 +275,7 @@ if not twf.movement.direction then
   -- using unserialize
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   local serialized = direction.serialize(direction.NORTH)
@@ -294,7 +294,7 @@ if not twf.movement.direction then
   -- Unserializes the specified string that was acquired from serialize.
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   local serialized = direction.serialize(direction.NORTH)
@@ -317,7 +317,7 @@ if not twf.movement.direction then
   -- the direction is not absolute (e.g. it's relative), an error is thrown.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints east
@@ -338,7 +338,7 @@ if not twf.movement.direction then
   -- the direction is not absolute (e.g. it's relative), an error is thrown.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints positive x
@@ -360,7 +360,7 @@ if not twf.movement.direction then
   -- direction is not relative (e.g. it's absolute), an error is thrown.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints positive x
@@ -382,7 +382,7 @@ if not twf.movement.direction then
   -- throw exceptions, but rather return "invalid".
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints east (+x)
@@ -405,7 +405,7 @@ if not twf.movement.direction then
   -- Returns if the two specified directions are equal to each other
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints true
@@ -425,7 +425,7 @@ if not twf.movement.direction then
   -- Computes the hashcode of the specified direction
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
   --   -- prints true
@@ -477,7 +477,7 @@ if not twf.movement.position then
   -- Creates a new position object and returns it.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p = Position:new()
   --   -- prints 0
@@ -504,7 +504,7 @@ if not twf.movement.position then
   -- Calculates the squared euclidean distance to the other position
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 0, y = 0, z = 0})
   --   local p2 = Position:new({x = 0, y = 5, z = 12})
@@ -527,7 +527,7 @@ if not twf.movement.position then
   -- Calculates the euclidean distance to the other position. 
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 0, y = 0, z = 0})
   --   local p2 = Position:new({x = 3, y = 4, z = 0})
@@ -551,7 +551,7 @@ if not twf.movement.position then
   -- Calculates the manhattan distance to the other position.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 0, y = 0, z = 0})
   --   local p2 = Position:new({x = 2, y = 3, z = 5})
@@ -575,7 +575,7 @@ if not twf.movement.position then
   -- point, with appropriate magnitude
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local Vector = twf.movement.Vector
   --
@@ -599,7 +599,7 @@ if not twf.movement.position then
   -- Serializes this instance into something unserializable
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p = Position:new({x = 3, y = 2, z = 5})
   --   local serialized = p:serialize()
@@ -617,7 +617,7 @@ if not twf.movement.position then
   -- Unserializes a serialized position into the position object
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p = Position:new({x = 3, y = 2, z = 5})
   --   local serialized = p:serialize()
@@ -638,7 +638,7 @@ if not twf.movement.position then
   -- this position.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local Vector = twf.movement.Vector
   --   local p = Position:new({x = 0, y = 1, z = 0})
@@ -657,7 +657,7 @@ if not twf.movement.position then
   -- different instance of position.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p = Position:new({x = 3, y = 2, z = 5})
   --   local p2 = p:clone()
@@ -677,7 +677,7 @@ if not twf.movement.position then
   -- Returns a human-readable, concise representation of this position
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 0, y = 1, z = 2})
   --   -- prints (0, 1, 2)
@@ -694,7 +694,7 @@ if not twf.movement.position then
   -- instance.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 2, y = 2, z = 2})
   --   local p2 = Position:new({x = 2, y = 2, z = 2})
@@ -712,7 +712,7 @@ if not twf.movement.position then
   -- Returns a reasonable hash code for this position instance.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Position = twf.movement.Position
   --   local p1 = Position:new({x = 2, y = 1, z = 2})
   --   local p2 = Position:new({x = 1, y = 2, z = 2})
@@ -763,7 +763,7 @@ if not twf.movement.Vector then
   -- Creates a new vector and returns it
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new()
   --   local v2 = Vector:new({deltaX = 5, deltaY = 0, deltaZ = 1})  
@@ -781,7 +781,7 @@ if not twf.movement.Vector then
   -- Calculates the magnitude of this vector
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 0, deltaZ = 4})
   --   local mag = v:magnitude()
@@ -799,7 +799,7 @@ if not twf.movement.Vector then
   -- magnitude of 1
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 2, deltaY = 0, deltaZ = 2})
   --   local uv = v:normalized()
@@ -817,7 +817,7 @@ if not twf.movement.Vector then
   -- Calculates the vector resulting from adding other to this instance
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 2, deltaY = 0, deltaZ = 2})
   --   local a = Vector:new({deltaX = 1, deltaY = 1, deltaZ = 1})
@@ -836,7 +836,7 @@ if not twf.movement.Vector then
   -- Calculates the vector resulting from multipling this vector by a scalar.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 2, deltaY = 0, deltaZ = 2})
   --   local v2 = v:multiply(2)
@@ -851,7 +851,7 @@ if not twf.movement.Vector then
   -- Calculates the vector resulting from subtracting other to this instance
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 2, deltaY = 0, deltaZ = 2})
   --   local a = Vector:new({deltaX = 1, deltaY = 1, deltaZ = 1})
@@ -870,7 +870,7 @@ if not twf.movement.Vector then
   -- Calculates the inverse of this vector.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 1, deltaY = 0, deltaZ = 2})
   --   local v2 = v:inverse()
@@ -889,7 +889,7 @@ if not twf.movement.Vector then
   -- Serializes the vector, such that it can be unserialized later
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
   --   local serialized = v:serialize()
@@ -907,7 +907,7 @@ if not twf.movement.Vector then
   -- Unserializes this vector from a serialized string
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
   --   local serialized = v:serialize()
@@ -927,7 +927,7 @@ if not twf.movement.Vector then
   -- Returns the point representation of this vector
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 5, deltaY = 0, deltaZ = 0})
   --   local p = v:toPosition()
@@ -944,7 +944,7 @@ if not twf.movement.Vector then
   -- Clones this vector instance
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
   --   local v2 = v:clone()
@@ -964,7 +964,7 @@ if not twf.movement.Vector then
   -- Returns a human-readable, concise string representation of this vector
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 1, deltaY = 3, deltaZ = 2})
   --   -- prints <1, 3, 2>
@@ -980,7 +980,7 @@ if not twf.movement.Vector then
   -- Compares this vector with another vector
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
   --   local v2 = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
@@ -998,7 +998,7 @@ if not twf.movement.Vector then
   -- Calculates a reasonable hash code of this vector
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
   --   local v2 = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
@@ -1047,7 +1047,7 @@ if not twf.movement.MovementResult then
   -- Returns if the specified movement result indicates success
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local MovementResult = twf.movement.MovementResult
   --   local mr = MovementResult.MOVE_NO_FUEL
   --
@@ -1071,7 +1071,7 @@ if not twf.movement.MovementResult then
   -- result code.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local MovementResult = twf.movement.MovementResult
   --   -- prints movement failed: not enough fuel
   --   print(MovementResult.toString(MovementResult.MOVE_NO_FUEL))
@@ -1095,7 +1095,7 @@ end
 -- to maintain its position and orientation relative to some point.
 --
 -- Usage:
---   require('twf_movement.lua')
+--   dofile('twf_movement.lua')
 --   local myTurtle = twf.movement.StatefulTurtle.loadOrInit('turtle_state.dat')
 --   myTurtle:moveForward()
 --   myTurtle:turnLeft()
@@ -1120,7 +1120,7 @@ if not twf.movement.StatefulTurtle
   -- (0, 0, 0) unless otherwise specified
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local st2 = StatefulTurtle:new({
@@ -1152,7 +1152,7 @@ if not twf.movement.StatefulTurtle
   -- the turtles true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:moveForward(2)
@@ -1175,7 +1175,7 @@ if not twf.movement.StatefulTurtle
   -- the turtles true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:moveBack(2)
@@ -1198,7 +1198,7 @@ if not twf.movement.StatefulTurtle
   -- true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:moveUp(2)
@@ -1221,7 +1221,7 @@ if not twf.movement.StatefulTurtle
   -- reflect the turtles true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:moveDown(2)
@@ -1246,7 +1246,7 @@ if not twf.movement.StatefulTurtle
   -- reflect the turtles true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:turnLeft(2)
@@ -1269,7 +1269,7 @@ if not twf.movement.StatefulTurtle
   -- reflect the turtles true position and orientation.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local succ = st:turnRight(2)
@@ -1292,7 +1292,7 @@ if not twf.movement.StatefulTurtle
   -- unserialized later.
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local serialized = st:serialize()
@@ -1310,7 +1310,7 @@ if not twf.movement.StatefulTurtle
   -- Unserializes a serialized stateful turtle into an object formats
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local serialized = st:serialize()
@@ -1331,7 +1331,7 @@ if not twf.movement.StatefulTurtle
   -- Clones this instance of stateful turtle.
   -- 
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   local cl = st:clone()
@@ -1348,7 +1348,7 @@ if not twf.movement.StatefulTurtle
   -- Returns a human-readable string representation of this stateful turtle
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
   --   -- Prints facing north at (0, 0, 0)
@@ -1365,7 +1365,7 @@ if not twf.movement.StatefulTurtle
   -- other instance
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local st  = StatefulTurtle:new()
   --   local st2 = StatefulTurtle:new()
   --   -- prints true
@@ -1382,7 +1382,7 @@ if not twf.movement.StatefulTurtle
   -- Returns a valid hashcode representation of this stateful turtle
   --
   -- Usage:
-  --   require('twf_movement.lua')
+  --   dofile('twf_movement.lua')
   --   local st  = StatefulTurtle:new()
   --   local st2 = StatefulTurtle:new()
   --   -- prints true
