@@ -1017,7 +1017,7 @@ end
 -----------------------------------------------------------------------------
 -- Describes a result from a movement, returned from most movement functions
 -----------------------------------------------------------------------------
-if not twf.movement.MovementResult
+if not twf.movement.MovementResult then
   local MovementResult = {}
   
   -- Constants - chosen to be moderately large primes to prevent collisions
