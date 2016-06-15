@@ -1015,6 +1015,7 @@ if not twf.movement.Vector then
 end
 
 -----------------------------------------------------------------------------
+-- twf.movement.MovementResult
 -- Describes a result from a movement, returned from most movement functions
 -----------------------------------------------------------------------------
 if not twf.movement.MovementResult then
@@ -1028,7 +1029,8 @@ if not twf.movement.MovementResult then
   MovementResult.MOVE_SUCCESS = 4903
   
   -----------------------------------------------------------------------------
-  -- Describes a movement that did not succeed with no further information
+  -- Describes a movement that did not succeed with no further information. 
+  -- This may indicate an entity is blocking the way.
   -----------------------------------------------------------------------------
   MovementResult.MOVE_FAILURE = 4909
   
@@ -1089,6 +1091,552 @@ if not twf.movement.MovementResult then
 end
 
 -----------------------------------------------------------------------------
+-- twf.movement.action
+--
+-- Describes actions that the turtle could be executing. This is effectively
+-- a thin wrapper around move functions that allows for consistent 
+-- serialization.
+-----------------------------------------------------------------------------
+if not twf.movement.action then
+  local action = {}
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.Action
+  --
+  -- Describes a generic action the turtle can do. This isn't used anywhere, it
+  -- is merely a reference for other actions
+  -----------------------------------------------------------------------------
+  do 
+    local Action = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of an action.
+    -- 
+    -- Usage: Not used directly
+    --
+    -- @param o (optional) superseding object
+    -- @return  a new instance of an Action
+    -----------------------------------------------------------------------------
+    function Action:new(o)
+      error('Action:new(o) should not be called!')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Performs this action. Should consume exactly 1 fuel on success
+    --
+    -- Usage: Not used directly
+    -----------------------------------------------------------------------------
+    function Action:perform()
+      error('Action:perform() should not be called!')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage: Not used directly
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function Action:updateState(stateTurtle)
+      error('Action:updateState(stateTurtle) should not be called!')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- A unique name for this action.
+    --
+    -- Usage: Not used directly
+    --
+    -- @return string, unique to this action type
+    -----------------------------------------------------------------------------
+    function Action:name()
+      error('Action:name() should not be called!')
+    end
+    
+    action.Action = Action
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.MoveForwardAction
+  -- 
+  -- An action that attempts to move the turtle forward one unit
+  -----------------------------------------------------------------------------
+  do
+    local MoveForwardAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of a move action
+    -- 
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveForward = twf.movement.action.MoveForwardAction:new()
+    --   -- like turtle.forward()
+    --   moveForward:perform()
+    -----------------------------------------------------------------------------
+    function MoveForwardAction:new(o)
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      return o
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to move the turtle forward once.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveForward = twf.movement.action.MoveForwardAction:new()
+    --   local result = moveForward:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function MoveForwardAction:perform()
+      if turtle.detect() then 
+        return MovementResult.MOVE_BLOCKED 
+      elseif turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.forward() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local moveForward = twf.movement.action.MoveForwardAction:new()
+    --   local result = moveForward:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     moveForward:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function MoveForwardAction:updateState(stateTurtle)
+      stateTurtle.position.x = stateTurtle.position.x + twf.movement.direction.changeInX(stateTurtle.orientation)
+      stateTurtle.position.y = stateTurtle.position.y + twf.movement.direction.changeInY(stateTurtle.orientation)
+      stateTurtle.position.z = stateTurtle.position.z + twf.movement.direction.changeInZ(stateTurtle.orientation)
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function MoveForwardAction:name()
+      return 'twf.movement.action.MoveForwardAction'
+    end
+    
+    action.MoveForwardAction = MoveForwardAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.MoveBackAction
+  -- 
+  -- An action that attempts to move the turtle back one unit
+  -----------------------------------------------------------------------------
+  do
+    local MoveBackAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of a move action
+    -- 
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveBack = twf.movement.action.MoveBackAction:new()
+    --   -- like turtle.back()
+    --   moveBack:perform()
+    -----------------------------------------------------------------------------
+    function MoveBackAction:new(o)
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      return o
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to move the turtle backward once.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveBack = twf.movement.action.MoveBackAction:new()
+    --   local result = moveBack:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- Remarks:
+    --   The turtle cannot detect blocks behind it - so back movements will never
+    --   return MovementResult.MOVE_BLOCKED
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function MoveBackAction:perform()
+      if turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.back() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local moveBack = twf.movement.action.MoveBackAction:new()
+    --   local result = moveBack:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     moveBack:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function MoveBackAction:updateState(stateTurtle)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function MoveBackAction:name()
+      return 'twf.movement.action.MoveBackAction'
+    end
+    
+    action.MoveBackAction = MoveBackAction
+  end
+  
+
+
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.MoveUpAction
+  -- 
+  -- An action that attempts to move the turtle up one unit
+  -----------------------------------------------------------------------------
+  do
+    local MoveUpAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of a move action
+    -- 
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveUp = twf.movement.action.MoveUpAction:new()
+    --   -- like turtle.up()
+    --   moveUp:perform()
+    -----------------------------------------------------------------------------
+    function MoveUpAction:new(o)
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      return o
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to move the turtle up once.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveUp = twf.movement.action.MoveUpAction:new()
+    --   local result = moveUp:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function MoveUpAction:perform()
+      if turtle.detectUp() then 
+        return MovementResult.MOVE_BLOCKED 
+      elseif turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.up() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local moveUp = twf.movement.action.MoveUpAction:new()
+    --   local result = moveUp:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     moveUp:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function MoveUpAction:updateState(stateTurtle)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function MoveUpAction:name()
+      return 'twf.movement.action.MoveUpAction'
+    end
+    
+    action.MoveUpAction = MoveUpAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.MoveDownAction
+  -- 
+  -- An action that attempts to move the turtle down one unit
+  -----------------------------------------------------------------------------
+  do
+    local MoveDownAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of a move down action
+    -- 
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveDown = twf.movement.action.MoveDownAction:new()
+    --   -- like turtle.down()
+    --   moveDown:perform()
+    -----------------------------------------------------------------------------
+    function MoveDownAction:new(o)
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      return o
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to move the turtle down once.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local moveDown = twf.movement.action.MoveDownAction:new()
+    --   local result = moveDown:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function MoveDownAction:perform()
+      if turtle.detectDown() then 
+        return MovementResult.MOVE_BLOCKED 
+      elseif turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.down() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local moveDown = twf.movement.action.MoveDownAction:new()
+    --   local result = moveDown:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     moveDown:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function MoveDownAction:updateState(stateTurtle)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function MoveDownAction:name()
+      return 'twf.movement.action.MoveDownAction'
+    end
+    
+    action.MoveDownAction = MoveDownAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.TurnRightAction
+  -- 
+  -- An action that attempts to turn the turtle right once
+  -----------------------------------------------------------------------------
+  do
+    local TurnRightAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of this action
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local twa = twf.movement.action.TurnRightAction:new()
+    --
+    -- @param o (optional) superseding object
+    -- @return a new instance of this action
+    -----------------------------------------------------------------------------
+    function TurnRightAction:new(o)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to turn the turtle right once
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local turnClockwise = twf.movement.action.TurnRightAction:new()
+    --   local result = turnClockwise:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function TurnRightAction:perform()
+      if turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.turnRight() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local turnClockwise = twf.movement.action.TurnRightAction:new()
+    --   local result = turnClockwise:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     turnClockwise:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function TurnRightAction:updateState(stateTurtle)
+      stateTurtle.orientation = twf.movement.direction.clockwiseOf(stateTurtle.orientation)
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function TurnRightAction:name()
+      return 'twf.movement.action.TurnRightAction'
+    end
+    
+    action.TurnRightAction = TurnRightAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.action.TurnLeftAction
+  -- 
+  -- An action that attempts to turn the turtle left once
+  -----------------------------------------------------------------------------
+  do
+    local TurnLeftAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of this action
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local twa = twf.movement.action.TurnLeftAction:new()
+    --
+    -- @param o (optional) superseding object
+    -- @return a new instance of this action
+    -----------------------------------------------------------------------------
+    function TurnLeftAction:new(o)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to turn the turtle right once
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local turnCounterClockwise = twf.movement.action.TurnLeftAction:new()
+    --   local result = turnCounterClockwise:perform()
+    --   -- Might print movement success
+    --   -- Might print movement failed: no fuel
+    --   print(twf.movement.MovementResult:toString(result))
+    --
+    -- @return twf.movement.MovementResult result of the movement attempt
+    -----------------------------------------------------------------------------
+    function TurnLeftAction:perform()
+      if turtle.getFuelLevel() < 1 then
+        return MovementResult.NO_FUEL
+      elseif turtle.turnLeft() then 
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local turnCounterClockwise = twf.movement.action.TurnLeftAction:new()
+    --   local result = turnCounterClockwise:perform()
+    --   if twf.movement.MovementResult.isSuccess(result) then
+    --     turnCounterClockwise:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function TurnLeftAction:updateState(stateTurtle)
+      stateTurtle.orientation = twf.movement.direction.counterClockwiseOf(stateTurtle.orientation)
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function TurnLeftAction:name()
+      return 'twf.movement.action.TurnLeftAction'
+    end
+    
+    action.TurnLeftAction = TurnLeftAction
+  end
+  
+  twf.movement.action = action
+end
+  
+-----------------------------------------------------------------------------
 -- twf.movement.StatefulTurtle
 --
 -- Describes a wrapper to the default turtle package that allows the turtle
@@ -1112,8 +1660,30 @@ if not twf.movement.StatefulTurtle then
   
   local StatefulTurtle = {}
   
+  -----------------------------------------------------------------------------
+  -- The action recovery file for this stateful turtle instance
+  -----------------------------------------------------------------------------
+  StatefulTurtle.actionRecoveryFile = 'turtle_state_action_recovery.dat'
+  
+  -----------------------------------------------------------------------------
+  -- The save file for this turtle
+  -----------------------------------------------------------------------------
+  StatefulTurtle.saveFile = 'turtle_state.dat'
+  
+  -----------------------------------------------------------------------------
+  -- The orientation of the turtle
+  -----------------------------------------------------------------------------
   StatefulTurtle.orientation = direction.NORTH
+  
+  -----------------------------------------------------------------------------
+  -- The position of the turtle
+  -----------------------------------------------------------------------------
   StatefulTurtle.position = Position:new()
+  
+  -----------------------------------------------------------------------------
+  -- The fuel level of the turtle
+  -----------------------------------------------------------------------------
+  StatefulTurtle.fuelLevel = 0
   
   -----------------------------------------------------------------------------
   -- Creates a new instance of StatefulTurtle, assumed to be facing north at 
@@ -1143,6 +1713,88 @@ if not twf.movement.StatefulTurtle then
     return o
   end
   
+  -- Chunk load/unload recovery
+  
+  -----------------------------------------------------------------------------
+  -- Prepares to perform the specified action by serializing the position, 
+  -- orientation, and fuel level to disk, as well as the action that is about
+  -- to be performed.
+  --
+  -- Example:
+  --   When the main program (such as a treefarm) wants to move the turtle 
+  --   forward once, a recovery file is saved to disk specifying the position,
+  --   orientation, and fuel level of the turtle. Then, the 'core' function is
+  --   attempted - in this case, turtle.forward. This function has a chance of
+  --   "disastrous failure" - in other words, the turtle gets unloaded without
+  --   warning.
+  --
+  --   If that doesn't happen:
+  --     The turtle moves forward, returning some kind of code indicating if 
+  --     the action was successful, and the turtles state is updated 
+  --     appropriately.
+  --
+  --   If that does happen:
+  --     The program has set up a startup file, which will be run when the 
+  --     turtle is loaded again. The startup file detects that the turtle has
+  --     an action recovery file, and creates a new stateful turtle instance
+  --     with the same action recovery file and calls recoverAction. That 
+  --     instance will compare its fuel to what it had prior to attempting
+  --     the action to see if the action was completed before disastrous 
+  --     failure. If it was completed, the appropriate modifications to the 
+  --     position prior to the action are made and set as the turtles current
+  --     position. If it was not completed, the turtles position is simply its
+  --     position prior to that action.
+  --     
+  --     At this point, the position of the turtle has been decided and action
+  --     recovery is considered a success - however, it's still up to the
+  --     program to decide how to recover from its task.
+  -- 
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local moveForwardAct = twf.movement.action.MoveForwardAction:new()
+  --   st:prepareAction(action)
+  --
+  -- @param action the action to prepare to do
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:prepareAction(action)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Undoes the operation done from prepareAction after an action is completed,
+  -- either successfully or not, in such a manner that the state of the 
+  -- stateful turtle is consistent. 
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local moveForwardAct = twf.movement.action.MoveForwardAction:new()
+  --   st:prepareAction(action,)
+  --   st:finishAction(action)
+  --
+  -- @param action the action that was prepared
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:finishAction(action)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Recovers from the action that was prepared to the disk if it is possible
+  -- to do so. This will succeed as long as nobody messed with the turtle.
+  --
+  -- Recovery is done by calculating if the move was performed (based on the
+  -- fuel level). If it wasn't performed, the turtles state is assumed to be
+  -- the same as before the action. If it was performed, the state is 
+  -- recalculated from where it must be after performing the saved action from 
+  -- the saved position.
+  --
+  -- @error if the fuel level is not in a valid state
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:recoverAction()
+    error('Not yet implemented')
+  end
+  
   -- Movement
   
   -----------------------------------------------------------------------------
@@ -1163,9 +1815,17 @@ if not twf.movement.StatefulTurtle then
   -- @param times (optional) specifies the number of times to move forward.
   --              default 1
   -- @return twf.movement.MovementResult the result of the movement
+  -- @see twf.movement.StatefulTurtle#prepareAction (Action Recovery)
   -----------------------------------------------------------------------------
   function StatefulTurtle:moveForward(times)
-    error('Not yet implemented')
+    local act = twf.movement.action.MoveForwardAction:new()
+    self:prepareAction(act)
+    local result = act:perform()
+    if twf.movement.MovementResult.isSuccess(result) then 
+      act:updateState(self)
+      self:saveToFile()
+    end
+    self:finishAction(act)
   end
   
   -----------------------------------------------------------------------------
@@ -1326,31 +1986,38 @@ if not twf.movement.StatefulTurtle then
   end
   
   -----------------------------------------------------------------------------
-  -- Loads the stateful turtle instance that was saved to the specified file, 
-  -- or returns a new stateful turtle instance if the file does nto exist or
-  -- is empty.
+  -- Loads the stateful turtle instance or creates a new one, depending on if 
+  -- the save file or action recovery file corresponding to the specified file
+  -- prefix exist.
+  --
+  -- The save file is simply the file prefix + .dat
+  -- The action recovery file is the file prefix + _action_recovery.dat
   --
   -- Usage:
-  --   local st = twf.movement.StatefulTurtle.loadOrInit('turtle_state.dat')
+  --   dofile('twf_movement.lua')
+  --   -- First searches for the action recovery file
+  --   -- turtle_state_action_recovery.dat.
+  --   -- Next searches for the safe file turtle_state.dat
+  --   -- Finally, initializes a new stateful turtle
+  --   local st = twf.movement.StatefulTurtle.loadOrInit('turtle_state')
   --
-  -- @param file string name of the file to load from
-  -- @return     stateful turtle instance
+  -- @param filePrefix the file prefix for the save and action recovery files
+  -- @return the saved stateful turtle or a new one
   -----------------------------------------------------------------------------
-  function StatefulTurtle.loadOrInit(file)
+  function StatefulTurtle.loadOrInit(filePrefix)
     error('Not yet implemented')
   end
   
   -----------------------------------------------------------------------------
-  -- Saves this instance to the specified file, creating the file or over-
-  -- writing its content as necessary.
+  -- Saves this instance to the disk, creating the file or overwriting its 
+  -- content as necessary. This is the prefered method of saving/loading when 
+  -- the turtle isn't recovering from being unloaded.
   --
   -- Usage:
   --   local st = twf.movement.StatefulTurtle:new()
   --   st:saveToFile()
-  --
-  -- @param file string name of the file to save to
   -----------------------------------------------------------------------------
-  function StatefulTurtle:saveToFile(file)
+  function StatefulTurtle:saveToFile()
     error('Not yet implemented')
   end
   
