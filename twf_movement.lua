@@ -1101,7 +1101,7 @@ end
 --   myTurtle:turnLeft()
 --   -- if turtle_state.dat was empty, prints Current State: facing west at (0, 0, -1)
 --   print('Current State: ' .. myTurtle:toString())
---   myTurtle:save('turtle_state.dat')
+--   myTurtle:saveToFile('turtle_state.dat')
 --   
 --   
 -----------------------------------------------------------------------------
@@ -1322,6 +1322,35 @@ if not twf.movement.StatefulTurtle then
   -- @return the instance of stateful turtle the string represents
   -----------------------------------------------------------------------------
   function StatefulTurtle.unserialize(serialized)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Loads the stateful turtle instance that was saved to the specified file, 
+  -- or returns a new stateful turtle instance if the file does nto exist or
+  -- is empty.
+  --
+  -- Usage:
+  --   local st = twf.movement.StatefulTurtle.loadOrInit('turtle_state.dat')
+  --
+  -- @param file string name of the file to load from
+  -- @return     stateful turtle instance
+  -----------------------------------------------------------------------------
+  function StatefulTurtle.loadOrInit(file)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Saves this instance to the specified file, creating the file or over-
+  -- writing its content as necessary.
+  --
+  -- Usage:
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   st:saveToFile()
+  --
+  -- @param file string name of the file to save to
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:saveToFile(file)
     error('Not yet implemented')
   end
   
