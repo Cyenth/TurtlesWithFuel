@@ -440,7 +440,7 @@ if not twf.inventory.Inventory then
   end
   
   -----------------------------------------------------------------------------
-  -- Calculates the change in items required for this inventory to match the 
+  -- Calculates the change in items dofiled for this inventory to match the 
   -- contents of the other inventory. This is always a strict comparison.
   -- 
   -- Usage:
@@ -533,7 +533,7 @@ if not twf.inventory.DigResult then
   local DigResult = {}
   
   -----------------------------------------------------------------------------
-  -- Indicates the dig was done successfully
+  -- Indicates the block was dug
   -----------------------------------------------------------------------------
   DigResult.DIG_SUCCESS = 5647
   
@@ -569,8 +569,8 @@ if not twf.inventory.DigResult then
   --   print(DigResult.isSuccess(dr))
   --
   -- @param digResult the dig result to check
-  -- @result          if there is no block where the dig result was trying to 
-  --                  dig
+  -- @result          if the dig result indicates success
+  -- @error           if digResult is not a valid code
   -----------------------------------------------------------------------------
   function DigResult.isSuccess(digResult)
     error('Not yet implemented')
@@ -583,11 +583,12 @@ if not twf.inventory.DigResult then
   --   dofile('twf_inventory.lua')
   --   local DigResult = twf.inventory.DigResult
   --   local dr = DigResult.NO_FUEL
-  --   -- prints 'dig failed: no fuel'
+  --   -- prints dig failed: no fuel
   --   print(DigResult.toString(dr))
   --
   -- @param digResult the dig result
   -- @return          string representation of the dig result
+  -- @error           if digResult is not a valid code
   -----------------------------------------------------------------------------
   function DigResult.toString(digResult)
     error('Not yet implemented')
@@ -597,44 +598,396 @@ if not twf.inventory.DigResult then
 end
 
 -----------------------------------------------------------------------------
+-- Describes the result of the turtle attempting to place an item in the
+-- currently selected slot
+-----------------------------------------------------------------------------
+if not twf.inventory.PlaceResult then
+  local PlaceResult = {}
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the item was placed successfully
+  -----------------------------------------------------------------------------
+  PlaceResult.SUCCESS = 1009
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that there is no item in the currently selected slot
+  -----------------------------------------------------------------------------
+  PlaceResult.NO_ITEM = 1013
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle does not have enough fuel to place the item
+  -----------------------------------------------------------------------------
+  PlaceResult.NO_FUEL = 1019
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the there is a block preventing the turtle from placing the
+  -- item.
+  -----------------------------------------------------------------------------
+  PlaceResult.BLOCKED = 1021
+  
+  -----------------------------------------------------------------------------
+  -- Indicates a general failure on the part of the turtle to place the item. 
+  -- Likely caused by an entity blocking the turtle
+  -----------------------------------------------------------------------------
+  PlaceResult.FAILURE = 1031
+  
+  -----------------------------------------------------------------------------
+  -- Returns if the specified place result indicates success
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local PlaceResult = twf.inventory.PlaceResult
+  --   local pr = PlaceResult.SUCCESS
+  --   -- prints true
+  --   print(PlaceResult.isSuccess(pr))
+  --
+  -- @param placeResult the place result to check
+  -- @return            if the place result indicates success
+  -- @error             if placeResult is not a valid code 
+  -----------------------------------------------------------------------------
+  function PlaceResult.isSuccess(placeResult)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a human-readable, string representation of the place result code
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local PlaceResult = twf.inventory.PlaceResult
+  --   local pr = PlaceResult.NO_FUEL
+  --   -- prints place failed: no fuel
+  --   print(PlaceResult.toString(pr))
+  --
+  -- @param placeResult the place result 
+  -- @return            string representation of the place result code
+  -- @error             if placeResult is not a valid code
+  -----------------------------------------------------------------------------
+  function PlaceResult.toString(placeResult)
+    error('Not yet implemented')
+  end
+  
+  twf.inventory.PlaceResult = PlaceResult
+end
+
+-----------------------------------------------------------------------------
+-- Describes the result of the turtle attempting to drop items, either onto
+-- the ground or into a chest-like object
+-----------------------------------------------------------------------------
+if not twf.inventory.DropResult then
+  local DropResult = {}
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle successfully dropped some items
+  -----------------------------------------------------------------------------
+  DropResult.SUCCESS = 7129
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle does not have enough fuel to drop items
+  -----------------------------------------------------------------------------
+  DropResult.NO_FUEL = 7151
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle did not drop items, but the reason cannot be 
+  -- determined. This could be that there are no items to drop, the chests 
+  -- inventory is full, or the turtle is dropping into a direction-aware
+  -- chest-like object from the wrong direction
+  -----------------------------------------------------------------------------
+  DropResult.FAILURE = 7159
+  
+  -----------------------------------------------------------------------------
+  -- Returns if the specified suck result indicates success, false otherwise.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local DropResult = twf.inventory.DropResult
+  --   local dr = DropResult.SUCCESS
+  --   -- prints true
+  --   print(DropResult.isSuccess(dr))
+  --
+  -- @param dropResult the drop result
+  -- @result           boolean true if the drop result indicates success, false
+  --                   otherwise
+  -- @error            if dropResult is not a valid code
+  -----------------------------------------------------------------------------
+  function DropResult.isSuccess(dropResult)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a human-readable string representation of the specified drop 
+  -- result
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local DropResult = twf.inventory.DropResult
+  --   local dr = DropResult.SUCCESS
+  --   -- prints drop: success
+  --   print(DropResult.toString(dr))
+  --
+  -- @param dropResult the drop result
+  -- @return           string representation of dropResult
+  -- @error            if dropResult is not a valid code
+  -----------------------------------------------------------------------------
+  function DropResult.toString(dropResult)
+    error('Not yet implemented')
+  end
+  
+  twf.inventory.DropResult = DropResult
+end
+
+-----------------------------------------------------------------------------
+-- Describes the result of the turtle attempting to suck items, either off 
+-- the ground or from a chest-like object
+-----------------------------------------------------------------------------
+if not twf.inventory.SuckResult then
+  local SuckResult = {}
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle successfully sucked some items
+  -----------------------------------------------------------------------------
+  SuckResult.SUCCESS = 6203
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle does not have enough fuel to suck items
+  -----------------------------------------------------------------------------
+  SuckResult.NO_FUEL = 6211
+  
+  -----------------------------------------------------------------------------
+  -- Indicates that the turtle did not suck items, but the reason cannot be 
+  -- determined. This could be that there are no items to suck, the turtles 
+  -- inventory is full, or the turtle is sucking from a direction-aware
+  -- chest-like object from the wrong direction
+  -----------------------------------------------------------------------------
+  SuckResult.FAILURE = 6217
+  
+  -----------------------------------------------------------------------------
+  -- Returns if the specified suck result indicates success, false otherwise.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local SuckResult = twf.inventory.SuckResult
+  --   local sr = SuckResult.SUCCESS
+  --   -- prints true
+  --   print(SuckResult.isSuccess(sr))
+  --
+  -- @param suckResult the suck result
+  -- @result           boolean true if the suck result indicates success, false
+  --                   otherwise
+  -- @error            if suckResult is not a valid code
+  -----------------------------------------------------------------------------
+  function SuckResult.isSuccess(suckResult)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a human-readable string representation of the specified suck 
+  -- result
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local SuckResult = twf.inventory.SuckResult
+  --   local sr = SuckResult.SUCCESS
+  --   -- prints suck: success
+  --   print(SuckResult.toString(sr))
+  --
+  -- @param suckResult the suck result
+  -- @return           string representation of suckResult
+  -- @error            if suckResult is not a valid code
+  -----------------------------------------------------------------------------
+  function SuckResult.toString(suckResult)
+    error('Not yet implemented')
+  end
+  
+  twf.inventory.SuckResult = SuckResult
+end
+-----------------------------------------------------------------------------
 -- Actions corresponding to new dig functions
 -----------------------------------------------------------------------------
 if not twf.inventory.action then
   local action = {}
   
   -----------------------------------------------------------------------------
-  -- twf.movement.action.DigForwardAction
+  -- twf.inventory.action.DigAction
   -- 
-  -- An action that attempts to dig in front of the turtle
+  -- An action that attempts to dig once
   -----------------------------------------------------------------------------
   do
-    local DigForwardAction = {}
+    local DigAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- The direction to dig in. Either twf.movement.direction.FORWARD, UP, or 
+    -- DOWN
+    -----------------------------------------------------------------------------
+    DigAction.direction = nil
+    
+    -----------------------------------------------------------------------------
+    -- The inventory difference after the last call to perform (tuple)
+    --
+    -- @see twf.inventory.Inventory#changeInItemsToGet(Inventory)
+    -----------------------------------------------------------------------------
+    DigAction.itemsLast = nil
     
     -----------------------------------------------------------------------------
     -- Creates a new instance of this action
     --
     -- Usage:
-    --   require('twf_inventory.lua')
-    --   local act = twf.movement.action.DigForwardAction:new()
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
     --
-    -- @param o (optional) superseding object
-    -- @return a new instance of this action
+    -- @param o superseding object
+    -- @return  a new instance of this action
+    -- @error   if o.direction is not valid
     -----------------------------------------------------------------------------
-    function DigForwardAction:new(o)
+    function DigAction:new(o)
       error('Not yet implemented')
     end
     
     -----------------------------------------------------------------------------
-    -- Attempts to dig once in front of the turtle
+    -- Attempts to dig once
     --
     -- Usage:
     --   dofile('twf_inventory.lua')
-    --   local digForward = twf.inventory.action.DigForwardAction:new()
+    --   local digForward = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
     --   local result, item = digForward:perform()
     --
     -- @return tuple of DigResult and ItemDetail for the result and mined items
     -----------------------------------------------------------------------------
-    function DigForwardAction:perform()
+    function DigAction:perform()
+      -- Use DigAction.itemsLast!
+      error('Not yet implemented')
+    end
+    
+     -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle. For digging related actions, this involves updating the
+    -- inventory of the turtle to reflect the newly added items, if any.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local digForward = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, items = digForward:perform()
+    --   if twf.inventory.DigResult.isSuccess(result) then
+    --     digForward:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function DigAction:updateState(stateTurtle)
+      -- Use DigAction.itemsLast!
+      error('Not yet implemented')
+    end
+    
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function DigAction:name()
+      return 'twf.inventory.action.DigAction'
+    end
+    
+    
+    -----------------------------------------------------------------------------
+    -- Serializes this action
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.DigAction.unserialize(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function DigAction:serialize()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.DigAction.unserialize(serialized)
+    -- 
+    -- @param serialized string serialization of this action
+    -- @return           action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function DigAction.unserialize(serialized)
+      error('Not yet implemented')
+    end
+    
+    action.DigAction = DigAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.inventory.action.PlaceAction
+  -- 
+  -- An action that attempts to place the currently selected item
+  -----------------------------------------------------------------------------
+  do
+    local PlaceAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- The direction of this place action. Either twf.movement.direction.FORWARD,
+    -- UP, or DOWN
+    -----------------------------------------------------------------------------
+    PlaceAction.direction = nil
+    
+    -----------------------------------------------------------------------------
+    -- The inventory difference after the last call to perform (tuple)
+    --
+    -- @see twf.inventory.Inventory#changeInItemsToGet(Inventory)
+    -----------------------------------------------------------------------------
+    DigAction.itemsLast = nil
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of this action
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --
+    -- @param o superseding object
+    -- @return  a new instance of this action
+    -- @error   if o.direction is not valid
+    -----------------------------------------------------------------------------
+    function PlaceAction:new(o)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Places the item in the currently selected slot in the appropriate
+    -- direction. Returns true if an item  was placed, false otherwise. Not 
+    -- usually called directly, since its result isn't as useful as that from 
+    -- perform().
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local succ = act:place() -- like turtle.place()
+    --
+    -- @return true if an item was placed, false otherwise
+    function PlaceAction:place()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to place an item in the currently selected slot in the 
+    -- appropriate direction
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local placeForward = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, item = placeForward:perform()
+    --
+    -- @return tuple of PlaceResult and ItemDetail for the result and placed item
+    -----------------------------------------------------------------------------
+    function PlaceAction:perform()
       error('Not yet implemented')
     end
     
@@ -645,15 +998,15 @@ if not twf.inventory.action then
     -- Usage:
     --   dofile('twf_movement.lua')
     --   local st = twf.movement.StatefulTurtle:new()
-    --   local digForward = twf.inventory.action.DigForwardAction:new()
-    --   local result, items = digForward:perform()
-    --   if twf.inventory.DigResult.isSuccess(result) then
-    --     digForward:updateState(st)
+    --   local placeForward = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, items = placeForward:perform()
+    --   if twf.inventory.PlaceResult.isSuccess(result) then
+    --     placeForward:updateState(st)
     --   end
     --
     -- @param stateTurtle stateful turtle to be updated
     -----------------------------------------------------------------------------
-    function DigForwardAction:updateState(stateTurtle)
+    function PlaceAction:updateState(stateTurtle)
       error('Not yet implemented')
     end
     
@@ -663,11 +1016,315 @@ if not twf.inventory.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function DigForwardAction:name()
-      return 'twf.inventory.action.DigForwardAction'
+    function PlaceAction:name()
+      return 'twf.inventory.action.PlaceAction'
     end
     
-    action.DigForwardAction = DigForwardAction
+    -----------------------------------------------------------------------------
+    -- Serializes this action
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.PlaceAction.unserialize(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function PlaceAction:serialize()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.PlaceAction.unserialize(serialized)
+    -- 
+    -- @param serialized string serialization of this action
+    -- @return           action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function PlaceAction.unserialize(serialized)
+      error('Not yet implemented')
+    end
+    
+    action.PlaceAction = PlaceAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.inventory.action.DropAction
+  -- 
+  -- An action that attempts to drop some amount of the currently selected 
+  -- item
+  -----------------------------------------------------------------------------
+  do
+    local DropAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- The direction to drop items in, either twf.movement.direction.FORWARD, UP,
+    -- or DOWN.
+    -----------------------------------------------------------------------------
+    DropAction.direction = nil
+    
+    -----------------------------------------------------------------------------
+    -- The maximum amount of items to drop, if there should be a limit. nil to 
+    -- try and drop the full stack
+    -----------------------------------------------------------------------------
+    DropAction.amount = nil
+    
+    -----------------------------------------------------------------------------
+    -- The inventory difference after the last call to perform (tuple)
+    --
+    -- @see twf.inventory.Inventory#changeInItemsToGet(Inventory)
+    -----------------------------------------------------------------------------
+    DropAction.itemsLast = nil
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of this action
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD, amount = 1})
+    --
+    -- @param o superseding object
+    -- @return  a new instance of this action
+    -- @error   if o.direction is not valid or o.amount is not valid
+    -----------------------------------------------------------------------------
+    function DropAction:new(o)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Drops items in the appropriate direction, returning true on success and 
+    -- false on failure. Not usually called directly, since the result is not 
+    -- as useful as that from perform().
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   -- drop 1 stack forward action 
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local succ = act:drop() -- like turtle.drop()
+    --
+    -- @return true on success, false on failure
+    -----------------------------------------------------------------------------
+    function DropAction:drop()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to drop the item.
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, item = act:perform()
+    --
+    -- @return tuple of DropResult and ItemDetail for the result and dropped item
+    -----------------------------------------------------------------------------
+    function DropAction:perform()
+      error('Not yet implemented')
+    end
+    
+     -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, items = act:perform()
+    --   if twf.inventory.DropResult.isSuccess(result) then
+    --     act:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function DropAction:updateState(stateTurtle)
+      error('Not yet implemented')
+    end
+    
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function DropAction:name()
+      return 'twf.inventory.action.DropAction'
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Serializes this action
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.DropAction.unserialize(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function DropAction:serialize()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.DropAction.unserialize(serialized)
+    -- 
+    -- @param serialized string serialization of this action
+    -- @return           action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function DropAction.unserialize(serialized)
+      error('Not yet implemented')
+    end
+    
+    action.DropAction = DropAction
+  end
+  
+  -----------------------------------------------------------------------------
+  -- twf.inventory.action.SuckAction
+  -- 
+  -- An action that attempts to suck some amount of stuff 
+  -----------------------------------------------------------------------------
+  do
+    local SuckAction = {}
+    
+    -----------------------------------------------------------------------------
+    -- The direction to suck items from, either twf.movement.direction.FORWARD, UP,
+    -- or DOWN.
+    -----------------------------------------------------------------------------
+    SuckAction.direction = nil
+    
+    -----------------------------------------------------------------------------
+    -- The maximum amount of items to suck, if there should be a limit. nil to 
+    -- try and suck a full stack
+    -----------------------------------------------------------------------------
+    SuckAction.amount = nil
+    
+    -----------------------------------------------------------------------------
+    -- The inventory difference after the last call to perform (tuple)
+    --
+    -- @see twf.inventory.Inventory#changeInItemsToGet(Inventory)
+    -----------------------------------------------------------------------------
+    SuckAction.itemsLast = nil
+    
+    -----------------------------------------------------------------------------
+    -- Creates a new instance of this action
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD, amount = 1})
+    --
+    -- @param o superseding object
+    -- @return  a new instance of this action
+    -- @error   if o.direction is not valid or o.amount is not valid
+    -----------------------------------------------------------------------------
+    function SuckAction:new(o)
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Sucks items from the appropriate direction, returning true on success and 
+    -- false on failure. Not usually called directly, since the result is not 
+    -- as useful as that from perform().
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   -- suck 1 stack forward action 
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local succ = act:suck() -- like turtle.suck()
+    --
+    -- @return true on success, false on failure
+    -----------------------------------------------------------------------------
+    function SuckAction:suck()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Attempts to suck the item.
+    --
+    -- Usage:
+    --   dofile('twf_inventory.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, item = act:perform()
+    --
+    -- @return tuple of SuckResult and ItemDetail for the result and sucked item
+    -----------------------------------------------------------------------------
+    function SuckAction:perform()
+      error('Not yet implemented')
+    end
+    
+     -----------------------------------------------------------------------------
+    -- Called when this action completes successfully - should update the state
+    -- of the turtle.
+    --
+    -- Usage:
+    --   dofile('twf_movement.lua')
+    --   local st = twf.movement.StatefulTurtle:new()
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local result, items = act:perform()
+    --   if twf.inventory.DropResult.isSuccess(result) then
+    --     act:updateState(st)
+    --   end
+    --
+    -- @param stateTurtle stateful turtle to be updated
+    -----------------------------------------------------------------------------
+    function SuckAction:updateState(stateTurtle)
+      error('Not yet implemented')
+    end
+    
+    
+    -----------------------------------------------------------------------------
+    -- Returns a unique name for this action type
+    --
+    -- @return a unique name for this action type
+    -----------------------------------------------------------------------------
+    function SuckAction:name()
+      return 'twf.inventory.action.SuckAction'
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Serializes this action
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.SuckAction.unserialize(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function SuckAction:serialize()
+      error('Not yet implemented')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serialize()
+    --   local unserialized = twf.inventory.action.SuckAction.unserialize(serialized)
+    -- 
+    -- @param serialized string serialization of this action
+    -- @return           action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function SuckAction.unserialize(serialized)
+      error('Not yet implemented')
+    end
+    
+    action.SuckAction = SuckAction
   end
   
   twf.inventory.action = action
@@ -678,9 +1335,6 @@ end
 -- miscellaneous item-related functions
 -----------------------------------------------------------------------------
 if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
-  
- 
-  
   local StatefulTurtle = twf.movement.StatefulTurtle
   
   -----------------------------------------------------------------------------
@@ -761,7 +1415,8 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   -----------------------------------------------------------------------------
   -- Attempts to dig forward, and returns the result of the action. If an item 
   -- is returned, the result is a tuple containing the dig result and the item 
-  -- detail describing what was collected. 
+  -- detail describing what was collected. Otherwise, returns the result code
+  -- and nil.
   -- 
   -- Usage:
   --   dofile('twf_inventory.lua')
@@ -773,7 +1428,11 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   --   -- prints something like Dug minecraft:log:1 x1
   --   print('Dug ' .. item:toString())
   --
-  -- @return a tuple {DigResult, Item}
+  -- Remarks:
+  --   Since digging does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.DigResult, twf.inventory.ItemDetail or nil}
   -----------------------------------------------------------------------------
   function StatefulTurtle:digForward()
     error('Not yet implemented')
@@ -782,8 +1441,8 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   -----------------------------------------------------------------------------
   -- Attempts to dig up, and returns the result of the action. If an item is 
   -- returned, the result is a tuple containing the dig result and the item 
-  -- detail describing what was collected. Otherwise, the result is just the 
-  -- dig result
+  -- detail describing what was collected. Otherwise, returns the result code
+  -- and nil.
   -- 
   -- Usage:
   --   dofile('twf_inventory.lua')
@@ -795,7 +1454,11 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   --   -- prints something like Dug minecraft:log:1 x1
   --   print('Dug ' .. item:toString())
   --
-  -- @return a tuple {DigResult, Item}
+  -- Remarks:
+  --   Since digging does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.DigResult, twf.inventory.ItemDetail or nil}
   -----------------------------------------------------------------------------
   function StatefulTurtle:digUp()
     error('Not yet implemented')
@@ -804,8 +1467,8 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   -----------------------------------------------------------------------------
   -- Attempts to dig down, and returns the result of the action. If an item is 
   -- returned, the result is a tuple containing the dig result and the item 
-  -- detail describing what was collected. Otherwise, the result is just the 
-  -- dig result
+  -- detail describing what was collected. Otherwise, returns the result code
+  -- and nil.
   -- 
   -- Usage:
   --   dofile('twf_inventory.lua')
@@ -817,9 +1480,228 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   --   -- prints something like Dug minecraft:log:1 x1
   --   print('Dug ' .. item:toString())
   --
-  -- @return a tuple {DigResult, Item}
+  -- Remarks:
+  --   Since digging does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.DigResult, twf.inventory.ItemDetail or nil}
   -----------------------------------------------------------------------------
   function StatefulTurtle:digDown()
+    error('Not yet implemented')
+  end
+  
+  -- Placing functions
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to place an item from the currently selected slot, and returns 
+  -- the the result code for the action, and either the ItemDetail that was 
+  -- placed or nil, as a tuple. 
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local placeResult, item = st:placeForward()
+  --   if not twf.inventory.PlaceResult.isSuccess(placeResult) then 
+  --     error(twf.inventory.PlaceResult.toString(placeResult)
+  --   end
+  --   -- prints something like Placed minecraft:log:1 x1
+  --   print('Placed ' .. item:toString())
+  --
+  -- Remarks:
+  --   Since placing does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.PlaceResult, twf.inventory.ItemDetail or nil}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:placeForward()
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to place an item from the currently selected slot, and returns 
+  -- the the result code for the action, and either the ItemDetail that was 
+  -- placed or nil, as a tuple. 
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local placeResult, item = st:placeUp()
+  --   if not twf.inventory.PlaceResult.isSuccess(placeResult) then 
+  --     error(twf.inventory.PlaceResult.toString(placeResult)
+  --   end
+  --   -- prints something like Placed minecraft:log:1 x1
+  --   print('Placed ' .. item:toString())
+  --
+  -- Remarks:
+  --   Since placing does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.PlaceResult, twf.inventory.ItemDetail or nil}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:placeUp()
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to place an item from the currently selected slot, and returns 
+  -- the the result code for the action, and either the ItemDetail that was 
+  -- placed or nil, as a tuple. 
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local placeResult, item = st:placeDown()
+  --   if not twf.inventory.PlaceResult.isSuccess(placeResult) then 
+  --     error(twf.inventory.PlaceResult.toString(placeResult)
+  --   end
+  --   -- prints something like Placed minecraft:log:1 x1
+  --   print('Placed ' .. item:toString())
+  --
+  -- Remarks:
+  --   Since placing does not dofile fuel or alter turtle state unrecoverably,
+  --   action recovery is not necessary, possible, or supported.
+  --
+  -- @return a tuple {twf.inventory.PlaceResult, twf.inventory.ItemDetail or nil}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:placeDown()
+    error('Not yet implemented')
+  end
+  
+  -- Dropping functions
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to drop the items in the currently selected slot immediately in 
+  -- front of the turtle, or into a chest in front of the turtle, and returns a 
+  -- tuple for the result code and dropped items.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local dropResult, item = st:dropForward()
+  --   if not twf.inventory.DropResult.isSuccess(dropResult) then 
+  --     error(twf.inventory.DropResult.toString(dropResult))
+  --   end
+  --   -- prints something like Dropped minecraft:log:1 x64
+  --  print('Dropped ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to drop
+  -- @return       tuple {twf.inventory.DropResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:dropForward(amount)
+    error('Not yet implemented')
+  end
+  
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to drop the items in the currently selected slot immediately 
+  -- below the turtle, or into a chest below the turtle, and returns a tuple 
+  -- for the result code and dropped items.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local dropResult, item = st:dropDown()
+  --   if not twf.inventory.DropResult.isSuccess(dropResult) then 
+  --     error(twf.inventory.DropResult.toString(dropResult))
+  --   end
+  --   -- prints something like Dropped minecraft:log:1 x64
+  --  print('Dropped ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to drop
+  -- @return       tuple {twf.inventory.DropResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:dropDown(amount)
+    error('Not yet implemented')
+  end
+  
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to drop the items in the currently selected slot immediately 
+  -- above the turtle, or into a chest above the turtle, and returns a tuple 
+  -- for the result code and dropped items.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local dropResult, item = st:dropUp()
+  --   if not twf.inventory.DropResult.isSuccess(dropResult) then 
+  --     error(twf.inventory.DropResult.toString(dropResult))
+  --   end
+  --   -- prints something like Dropped minecraft:log:1 x64
+  --  print('Dropped ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to drop
+  -- @return       tuple {twf.inventory.DropResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------  
+  function StatefulTurtle:dropUp(amount)
+    error('Not yet implemented')
+  end
+  
+  -- Sucking functions
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to suck a stack of item into the currently selected slot, or the 
+  -- slot with the next id. If no slot is found at slot 16, wraps to slot 1.
+  -- Stops searching for a slot when every slot has been searched.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local suckResult, item = st:suckForward()
+  --   if not twf.inventory.SuckResult.isSuccess(suckResult) then
+  --     error(twf.inventory.SuckResult.toString(suckResult))
+  --   end
+  --   -- prints something like Sucked minecraft:log:1 x64
+  --   print('Sucked ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to suck
+  -- @return       tuple {twf.inventory.SuckResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:suckForward(amount)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to suck a stack of item into the currently selected slot, or the 
+  -- slot with the next id. If no slot is found at slot 16, wraps to slot 1.
+  -- Stops searching for a slot when every slot has been searched.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local suckResult, item = st:suckDown()
+  --   if not twf.inventory.SuckResult.isSuccess(suckResult) then
+  --     error(twf.inventory.SuckResult.toString(suckResult))
+  --   end
+  --   -- prints something like Sucked minecraft:log:1 x64
+  --   print('Sucked ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to suck
+  -- @return       tuple {twf.inventory.SuckResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:suckDown(amount)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Attempts to suck a stack of item into the currently selected slot, or the 
+  -- slot with the next id. If no slot is found at slot 16, wraps to slot 1.
+  -- Stops searching for a slot when every slot has been searched.
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local suckResult, item = st:suckUp()
+  --   if not twf.inventory.SuckResult.isSuccess(suckResult) then
+  --     error(twf.inventory.SuckResult.toString(suckResult))
+  --   end
+  --   -- prints something like Sucked minecraft:log:1 x64
+  --   print('Sucked ' .. item:toString())
+  --
+  -- @param amount (optional) number maximum things to suck
+  -- @return       tuple {twf.inventory.SuckResult, twf.inventory.ItemDetail}
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:suckUp(amount)
     error('Not yet implemented')
   end
   
