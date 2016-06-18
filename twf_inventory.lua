@@ -885,7 +885,7 @@ if not twf.inventory.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function DigAction:name()
+    function DigAction.name()
       return 'twf.inventory.action.DigAction'
     end
     
@@ -1016,7 +1016,7 @@ if not twf.inventory.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function PlaceAction:name()
+    function PlaceAction.name()
       return 'twf.inventory.action.PlaceAction'
     end
     
@@ -1153,7 +1153,7 @@ if not twf.inventory.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function DropAction:name()
+    function DropAction.name()
       return 'twf.inventory.action.DropAction'
     end
     
@@ -1289,7 +1289,7 @@ if not twf.inventory.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function SuckAction:name()
+    function SuckAction.name()
       return 'twf.inventory.action.SuckAction'
     end
     
@@ -1331,8 +1331,8 @@ if not twf.inventory.action then
 end
   
 -----------------------------------------------------------------------------
--- Extensions to twf.movement.StatefulTurtle to allow for digging, as well as
--- miscellaneous item-related functions
+-- Extensions to twf.movement.StatefulTurtle to allow for digging, placing, 
+-- dropping, and sucking, as well as miscellaneous item-related functions
 -----------------------------------------------------------------------------
 if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   local StatefulTurtle = twf.movement.StatefulTurtle

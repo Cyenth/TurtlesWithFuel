@@ -1142,14 +1142,14 @@ if not twf.movement.action then
     end
     
     -----------------------------------------------------------------------------
-    -- A unique name for this action.
+    -- A unique name for this action type.
     --
     -- Usage: Not used directly
     --
     -- @return string, unique to this action type
     -----------------------------------------------------------------------------
-    function Action:name()
-      error('Action:name() should not be called!')
+    function Action.name()
+      return 'twf.movement.action.Action'
     end
     
     -----------------------------------------------------------------------------
@@ -1332,7 +1332,7 @@ if not twf.movement.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function MoveAction:name()
+    function MoveAction.name()
       return 'twf.movement.action.MoveAction'
     end
     
@@ -1460,7 +1460,7 @@ if not twf.movement.action then
     --
     -- @return a unique name for this action type
     -----------------------------------------------------------------------------
-    function TurnAction:name()
+    function TurnAction.name()
       return 'twf.movement.action.TurnAction'
     end
     
@@ -1591,7 +1591,7 @@ if not twf.movement.StatefulTurtle then
   --   orientation, and fuel level of the turtle. Then, the 'core' function is
   --   attempted - in this case, turtle.forward. This function has a chance of
   --   "disastrous failure" - in other words, the turtle gets unloaded without
-  --   warning.
+  --   warning and without guarranteeing the state of the turtle.
   --
   --   If that doesn't happen:
   --     The turtle attempts to moves forward, returning some kind of code 
