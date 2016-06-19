@@ -14,7 +14,7 @@ Here is an example of such a program for a cobblestone generator:
 
     dofile('twf_actionpath.lua') -- Import TWF actionpaths
     
-    ActionPath:new({
+    twf.actionpath.action.ActionPath:new({
       head = twf.actionpath.action.SelectorAction:new({
         children = {
           twf.actionpath.action.SequenceAction:new({
