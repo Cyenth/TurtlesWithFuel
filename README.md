@@ -50,4 +50,4 @@ Here is an example of such a program for a cobblestone generator:
           })
         }
       })
-    })
+    }):SaveToFile('cobble_generator.actionpath')
