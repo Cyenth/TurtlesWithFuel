@@ -131,6 +131,39 @@ if not twf.inventory.ItemDetail then
   end
   
   -----------------------------------------------------------------------------
+  -- Serializes this item detail into a string
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local birchLog = ItemDetail:new({name = 'minecraft:log', damage = 2, count = 1})
+  --   local serialized = birchLog:serialize()
+  --   local unserialized = ItemDetail.unserialize(serialized)
+  --
+  -- @return string serialization of this item detail
+  -----------------------------------------------------------------------------
+  function ItemDetail:serialize()
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes this item detail
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local birchLog = ItemDetail:new({name = 'minecraft:log', damage = 2, count = 1})
+  --   local serialized = birchLog:serialize()
+  --   local unserialized = ItemDetail.unserialize(serialized)
+  --
+  -- @param serialized the string serialization from serialize
+  -- @return           the item detail that was serialized
+  -----------------------------------------------------------------------------
+  function ItemDetail.unserialize(serialized)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
   -- Returns if this item detail is logically equivalent to the other item 
   -- detail, including stack size.
   --
@@ -554,7 +587,8 @@ if not twf.inventory.DigResult then
   DigResult.NO_FUEL = 5657
   
   -----------------------------------------------------------------------------
-  -- Indicates a general failure to dig - this is probably bedrock
+  -- Indicates a general failure to dig - this is probably bedrock or a full 
+  -- inventory.
   -----------------------------------------------------------------------------
   DigResult.DIG_FAILED = 5659
   
