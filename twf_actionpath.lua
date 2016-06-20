@@ -198,7 +198,7 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
@@ -213,7 +213,7 @@ if not twf.actionpath.ActionPath then
   --   local myCustomAction2 = {}
   --   -- Functions, like above, omitted
   --   -- ...
-  --   actPath:registerActions(myCustomAction, myCustomAction2, twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(myCustomAction, myCustomAction2, twf.actionpath.action)
   -- 
   -- @param arg either a table of actions or an action to load or some 
   --            combination of those
@@ -229,7 +229,7 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   --   actPath:loadFromFile('my_prog.actionpath')
   --
   -- @param fileName the file to load from 
@@ -261,7 +261,7 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   --   actPath:loadFromFile('my_prog.actionpath')
   --   actPath:tick()
   -----------------------------------------------------------------------------
@@ -275,7 +275,7 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   --   local act = twf.actionpath.action.FuelCheckAction({fuelLevel = 5})
   --   local serialized = actPath:serializeAction(act)
   --   local unserialized = actPath:unserializeAction(act)
@@ -298,7 +298,7 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   --   local act = twf.actionpath.action.FuelCheckAction({fuelLevel = 5})
   --   local serialized = actPath:serializeAction(act)
   --   local unserialized = actPath:unserializeAction(act)
@@ -335,10 +335,10 @@ if not twf.actionpath.ActionPath then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local actPath = twf.actionpath.ActionPath:new()
-  --   actPath:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath:registerActions(twf.actionpath.action)
   --   local serialized = actPath:serialize()
   --   local actPath2 = twf.actionpath.ActionPath:new()
-  --   actPath2:registerActions(twf.movement.action, twf.actionpath.action)
+  --   actPath2:registerActions(twf.actionpath.action)
   --   actPath2:unserialize(serialized)
   --
   -- @param serialized string serialization of an actionpath
@@ -372,7 +372,7 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   --   dofile('twf_actionpath.lua')
   --   local ActionPath = twf.actionpath.ActionPath
   --   local myProg = ActionPath:new()
-  --   myProg:registerActions(twf.movement.action, twf.actionpath.action)
+  --   myProg:registerActions(twf.actionpath.action)
   --   -- Register custom actions here
   --   myProg:loadFromFile('my_program.actionpath')
   --   
