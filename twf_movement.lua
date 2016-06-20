@@ -1691,7 +1691,7 @@ if not twf.movement.StatefulTurtle then
       local act = twf.movement.action.MoveAction:new({direction = twf.movement.direction.FORWARD})
       self:prepareAction(act)
       result = act:perform()
-      local success = twf.movement.MovementResult.isSucces(result)
+      local success = twf.movement.MovementResult.isSuccess(result)
       if success then 
         act:updateState(self)
         self:saveToFile()

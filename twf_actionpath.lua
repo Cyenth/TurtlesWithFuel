@@ -46,21 +46,24 @@ if not twf.actionpath.action.Action then
   end
   
   -----------------------------------------------------------------------------
-  -- Performs this action. Returns the result of the action. 
+  -- Performs this action. Returns the result of the action. The actionpath 
+  -- such that the last action is assumed to have succeeded.
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.Action:new()
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
   --
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Action:perform(pathState)
-    error('Action:perform(pathState) should not be called directly!')
+  function Action:perform(stateTurtle, pathState)
+    error('Action:perform(stateTurtle, pathState) should not be called directly!')
   end
   
   -----------------------------------------------------------------------------
@@ -72,7 +75,7 @@ if not twf.actionpath.action.Action then
   --   local act = twf.actionpath.action.Action:new()
   --   local st = twf.movement.StateTurtle.loadOrInit('my_program')
   --   local pathState = {}
-  --   local result = act:perform(pathState)
+  --   local result = act:perform(st, pathState)
   --   if someSuccessCheck(result) then 
   --     act:update(st, pathState)
   --   end
@@ -139,6 +142,9 @@ end
 -- special consideration for recovery due to the high "disastrous failure" 
 -- rate of turtles.
 --
+-- In order for successful recover, action paths should have each step 
+-- involve going to absolute positions, never relative ones.
+--
 -- Comparing to behavior trees:
 --   Action <=> Behavior 
 --   Most default actions are already implemented in twf.actionpath.actions
@@ -199,7 +205,7 @@ if not twf.actionpath.ActionPath then
   --   local actPath = twf.actionpath.ActionPath:new()
   --   local myCustomAction = {}
   --   function myCustomAction:new(o) error('Not yet implemented') end
-  --   function myCustomAction:perform(pathState) error('Not yet implemented') end
+  --   function myCustomAction:perform(stateTurtle, pathState) error('Not yet implemented') end
   --   function myCustomAction:updateState(stateTurtle, pathState) error('Not yet implemented') end
   --   function myCustomAction.name() return 'myCustomAction' end
   --   function myCustomAction:serialize(actionPath) error('Not yet implemented') end
@@ -342,7 +348,6 @@ if not twf.actionpath.ActionPath then
     error('Not yet implemented')
   end
   
-  
   twf.actionpath.ActionPath = ActionPath
 end
 
@@ -354,7 +359,13 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   local StatefulTurtle = twf.movement.StatefulTurtle
   
   -----------------------------------------------------------------------------
-  -- Executes or recovers the specified actionpath.
+  -- Executes or recovers the specified actionpath. Should not be used with 
+  -- loadOrInit.
+  --
+  -- Remarks:
+  --  First loads the actionpath from file. Due to the strict serialization 
+  --  this will run the turtle in the appropriate state - the next child to
+  --  be called will 
   --
   -- Usage:
   --   -- Generally in startup file
@@ -365,16 +376,20 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   --   -- Register custom actions here
   --   myProg:loadFromFile('my_program.actionpath')
   --   
-  --   local st = twf.movement.StatefulTurtle.loadOrInit('my_program')
-  --   st:executeActionPath(myProg)
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   st:executeActionPath(myProg, 'state', 'actpath_state')
   --
   -- Remarks:
   --   This function may never return 
   --
-  -- @param actionPath the action path to execute
-  -- @see              twf.actionpath.ActionPath
+  -- @param actionPath         the action path to execute
+  -- @param statePrefix        prefix for the turtle state. 
+  --                           Postfixed with .dat and _action_recovery.dat
+  -- @param actPathStatePrefix prefix for the action path state.
+  --                           Postfixed with _recovery.dat
+  -- @see                      twf.actionpath.ActionPath
   -----------------------------------------------------------------------------
-  function StatefulTurtle:executeActionPath(actionPath)
+  function StatefulTurtle:executeActionPath(actionPath, statePrefix, actPathStatePrefix)
     error('Not yet implemented')
   end
   
@@ -472,16 +487,18 @@ if not twf.actionpath.action.SequenceAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.SequenceAction:new({children = {}})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   --
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function SequenceAction:perform(pathState)
+  function SequenceAction:perform(stateTurtle, pathState)
     error('Not yet implemented')
   end
   
@@ -584,16 +601,17 @@ if not twf.actionpath.action.SelectorAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.SelectorAction:new({children = {}})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function SelectorAction:perform(pathState)
+  function SelectorAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -707,16 +725,17 @@ if not twf.actionpath.action.RandomSelectorAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.RandomSelectorAction:new({children = {}})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function RandomSelectorAction:perform(pathState)
+  function RandomSelectorAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -813,16 +832,17 @@ if not twf.actionpath.action.Inverter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.Inverter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Inverter:perform(pathState)
+  function Inverter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -915,16 +935,17 @@ if not twf.actionpath.action.Succeeder then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.Succeeder:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Succeeder:perform(pathState)
+  function Succeeder:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1018,16 +1039,17 @@ if not twf.actionpath.action.RepeatUntilFailure then
   
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.RepeatUntilFailure:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:perform(pathState)
+  function RepeatUntilFailure:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1137,16 +1159,17 @@ if not twf.actionpath.action.Repeater then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.Repeater:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Repeater:perform(pathState)
+  function Repeater:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1242,17 +1265,18 @@ if not twf.actionpath.action.DieOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.DieOnFailure:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
-  function DieOnFailure:perform(pathState)
+  function DieOnFailure:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1347,17 +1371,18 @@ if not twf.actionpath.action.RetryOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.RetryOnFailure:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
-  function RetryOnFailure:perform(pathState)
+  function RetryOnFailure:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1451,16 +1476,17 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.MoveResultInterpreter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:perform(pathState)
+  function MoveResultInterpreter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1554,16 +1580,17 @@ if not twf.actionpath.action.DigResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:perform(pathState)
+  function DigResultInterpreter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1657,16 +1684,17 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:perform(pathState)
+  function PlaceResultInterpreter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1760,16 +1788,17 @@ if not twf.actionpath.action.DropResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:perform(pathState)
+  function DropResultInterpreter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1863,16 +1892,17 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:perform(pathState)
+  function SuckResultInterpreter:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -1935,6 +1965,328 @@ end
 -- Leafs
 
 -----------------------------------------------------------------------------
+-- twf.actionpath.action.MoveAction
+--
+-- Moves the turtle in a specific direction a specific number of times. Made 
+-- to be specifically compatible with action paths
+-----------------------------------------------------------------------------
+if not twf.actionpath.action.MoveAction then
+  local MoveAction = {}
+  
+  -----------------------------------------------------------------------------
+  -- The final position of the turtle when the move action has completed. Set 
+  -- up after being called again when the result was not RUNNING last time.
+  -----------------------------------------------------------------------------
+  MoveAction.finalPosition = nil
+  
+  -----------------------------------------------------------------------------
+  -- How many times to move
+  -----------------------------------------------------------------------------
+  MoveAction.times = nil
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.direction to move in, either FORWARD, UP, DOWN, or BACK
+  -----------------------------------------------------------------------------
+  MoveAction.direction = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new twf.actionpath.action.MoveAction instance
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MoveAction({
+  --     direction = twf.movement.direction.UP,
+  --     times = 2
+  --   })
+  --
+  -- @param o superseding object
+  -- @return  new instance of move action
+  -- @error   if o.direction is not a valid direction to move in
+  -----------------------------------------------------------------------------
+  function MoveAction:new(o)
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      
+      local dirValid =       o.direction == twf.movement.direction.FORWARD
+      dirValid = dirValid or o.direction == twf.movement.direction.BACK
+      dirValid = dirValid or o.direction == twf.movement.direction.UP
+      dirValid = dirValid or o.direction == twf.movement.direction.DOWN
+      
+      if not dirValid then 
+        error('MoveAction:new() Expected direction twf.movement.direction.FORWARD, BACK, UP, or DOWN!')
+      end
+      
+      if type(o.times) ~= 'number' || o.times < 1 then
+        o.times = 1
+      end
+      
+      return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns success if the turtle has reached its destination. If its 
+  -- destination has not been set, sets the destination and returns RUNNING.
+  -- If it has been set, moves in the appropriate direction and returns RUNNING.
+  -- Cannot fail - so be careful of obstructions!
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.MoveAction({
+  --     direction = twf.movement.direction.UP,
+  --     times = 2
+  --   })
+  --   local res = act:perform(st, {}) -- RUNNING (set destination)
+  --   res = act:perform(st, {}) -- RUNNING (move up)
+  --   res = act:perform(st, {}) -- RUNNING (move up)
+  --   res = act:perform(st, {}) -- SUCCESS (destination reached)
+  --
+  -- @param stateTurtle the state turtle to act on 
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -----------------------------------------------------------------------------
+  function MoveAction:perform(stateTurtle, pathState)
+    local delegate = twf.movement.action.MoveAction:new({direction = self.direction})
+    
+    if not self.finalPosition then 
+      local fakeStateTurtle = {
+        position = {
+          x = stateTurtle.position.x,
+          y = stateTurtle.position.y,
+          z = stateTurtle.position.z
+        }
+      }
+      
+      for i = 1, self.times, 1 do
+        delegate.updateState(fakeStateTurtle)
+      end
+      self.finalPosition = fakeStateTurtle.position
+      return twf.actionpath.ActionResult.RUNNING
+    end
+    
+    do
+      local notAtDest =        self.finalPosition.x ~= stateTurtle.position.x
+      notAtDest = notAtDest or self.finalPosition.y ~= stateTurtle.position.y
+      notAtDest = notAtDest or self.finalPosition.z ~= stateTurtle.position.z
+      
+      if not notAtDest then
+        return twf.actionpath.ActionResult.SUCCESS 
+      end
+    end
+    
+    stateTurtle:prepareAction(delegate)
+    local result = delegate:perform()
+    if twf.movement.MovementResult.isSuccess(result) then
+      delegate:updateState(st)
+    end
+    stateTurtle:finishAction(delegate)
+    
+    return twf.actionpath.ActionResult.RUNNING
+  end
+  
+  -----------------------------------------------------------------------------
+  -- No-op
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function MoveAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.MoveAction
+  --   print(twf.actionpath.action.MoveAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function MoveAction.name()
+    return 'twf.actionpath.action.MoveAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MoveAction:new({direction = twf.movement.direction.FORWARD, times = 2})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.MoveAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function MoveAction:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.direction = self.direction
+    resultTable.times = self.times
+    resultTable.finalPosition = self.finalPosition
+    
+    return textutils.serialize(resultTable)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MoveAction:new({direction = twf.movement.direction.FORWARD, times = 2})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.MoveAction.unserialize(serialized)
+  --
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function MoveAction.unserialize(serialized)
+    local serTable = textutils.unserialize(serialized)
+    
+    local direction = serTable.direction
+    local times = serTable.times
+    local finalPos = serTable.finalPosition
+    
+    return MoveAction:new({direction = direction, times = times, finalPosition = finalPos})
+  end
+  
+  twf.actionpath.action.MoveAction = MoveAction
+end
+
+-----------------------------------------------------------------------------
+-- twf.actionpath.action.TurnAction
+--
+-- Turns the turtle in a specific direction a specific number of times. Made 
+-- to be specifically compatible with action paths
+-----------------------------------------------------------------------------
+if not twf.actionpath.action.TurnAction then
+  local TurnAction = {}
+  
+  -----------------------------------------------------------------------------
+  -- The final direction of the turtle when the move action has completed. Set 
+  -- up after being called again when the result was not RUNNING last time.
+  -----------------------------------------------------------------------------
+  TurnAction.finalDirection = nil
+  
+  -----------------------------------------------------------------------------
+  -- How many times to turn
+  -----------------------------------------------------------------------------
+  TurnAction.times = nil
+  
+  -----------------------------------------------------------------------------
+  -- twf.movement.direction to move in, either LEFT or RIGHT
+  -----------------------------------------------------------------------------
+  TurnAction.direction = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new twf.actionpath.action.TurnAction instance
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.TurnAction({
+  --     direction = twf.movement.direction.LEFT,
+  --     times = 2
+  --   })
+  --
+  -- @param o superseding object
+  -- @return  new instance of move action
+  -- @error   if o.direction is not a valid direction to move in
+  -----------------------------------------------------------------------------
+  function TurnAction:new(o)
+      error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns success if the turtle has reached its destination. If its 
+  -- destination has not been set, sets the destination and returns RUNNING.
+  -- If it has been set, turns in the appropriate direction and returns RUNNING.
+  -- Cannot fail - so be careful of obstructions!
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.TurnAction({
+  --     direction = twf.movement.direction.LEFT,
+  --     times = 2
+  --   })
+  --   local res = act:perform(st, {}) -- RUNNING (set destination)
+  --   res = act:perform(st, {}) -- RUNNING (move left)
+  --   res = act:perform(st, {}) -- RUNNING (move left)
+  --   res = act:perform(st, {}) -- SUCCESS (destination reached)
+  --
+  -- @param stateTurtle the state turtle to act on 
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -----------------------------------------------------------------------------
+  function TurnAction:perform(stateTurtle, pathState)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- No-op
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function TurnAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.TurnAction
+  --   print(twf.actionpath.action.TurnAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function TurnAction.name()
+    return 'twf.actionpath.action.TurnAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.TurnAction:new({direction = twf.movement.direction.FORWARD, times = 2})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.TurnAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function TurnAction:serialize(actionPath)
+    error('Not yet implemented')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.TurnAction:new({direction = twf.movement.direction.LEFT, times = 2})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.TurnAction.unserialize(serialized)
+  --
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function TurnAction.unserialize(serialized)
+    error('Not yet implemented')
+  end
+  
+  twf.actionpath.action.TurnAction = TurnAction
+end
+
+-----------------------------------------------------------------------------
 -- twf.actionpath.action.FuelCheckAction
 --
 -- Checks if the fuel is above a certain level. If it is, returns SUCCESS 
@@ -1969,16 +2321,17 @@ if not twf.actionpath.action.FuelCheckAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.FuelCheckAction:new({fuelLevel = 5})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function FuelCheckAction:perform(pathState)
+  function FuelCheckAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -2112,21 +2465,22 @@ if not twf.actionpath.action.InventoryCheckAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.InventoryCheckAction:new(
   --     {
   --       item = { name = 'any', count = 64 },
   --       slots = { 16 },
   --       countCheck = 'exact' 
   --     })
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function InventoryCheckAction:perform(pathState)
+  function InventoryCheckAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -2220,16 +2574,17 @@ if not twf.actionpath.action.InventorySelectAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.InventorySelectAction:new({slotIndex = 1})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function InventorySelectAction:perform(pathState)
+  function InventorySelectAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   
@@ -2360,16 +2715,17 @@ if not twf.actionpath.action.DropAction then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.actionpath.action.DropAction:new({slotIndex = 1})
-  --   local res = act:perform({})
+  --   local res = act:perform(st, {})
   --
-  -- @param pathState an object containing the state of this actionpath. May be
-  --                  modified to save state between calls, but should not break
-  --                  serialization with textutils.serialize
-  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function DropAction:perform(pathState)
+  function DropAction:perform(stateTurtle, pathState)
     error('Not yet implemented!')
   end
   

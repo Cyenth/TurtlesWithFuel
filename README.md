@@ -24,23 +24,19 @@ Here is an example of such a program for a cobblestone generator:
                 slots = { 16 },
                 countCheck = 'exact'
               }),
-              twf.actionpath.action.DieOnFailure:new({
-                child = twf.actionpath.action.Repeater:new({
-                  child = twf.movement.action.TurnAction:new({direction = twf.movement.direction.RIGHT}),
-                  times = 2
-                })
+              twf.actionpath.action.TurnAction:new({
+                direction = twf.movement.direction.RIGHT,
+                times = 2
               }),
               twf.actionpath.action.RetryOnFailure:new({
                 child = twf.actionpath.action.DropAction:new({
                   dropBy = 'all', direction = twf.movement.direction.FORWARD
                 })
-              })
-              twf.actionpath.action.DieOnFailure:new({
-                child = twf.actionpath.action.Repeater:new({
-                  child = twf.movement.action.TurnAction:new({direction = twf.movement.direction.RIGHT}),
-                  times = 2
-                })
-              })
+              }),
+              twf.actionpath.action.TurnAction:new({
+                direction = twf.movement.direction.RIGHT,
+                times = 2
+              }),
             }
           }),
           twf.actionpath.action.Succeeder:new({
