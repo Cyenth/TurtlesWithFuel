@@ -96,7 +96,15 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid, absolute direction
   -----------------------------------------------------------------------------
   function direction.changeInY(dir)
-    error('Not yet implemented')
+    if     dir == direction.NEGATIVE_Z then return 0
+    elseif dir == direction.POSITIVE_X then return 0
+    elseif dir == direction.POSITIVE_Z then return 0
+    elseif dir == direction.NEGATIVE_X then return 0
+    elseif dir == direction.POSITIVE_Y then return 1
+    elseif dir == direction.NEGATIVE_Y then return -1
+    else
+      error('Expected absolute direction but got ' .. dir .. ' (type: ' .. type(dir) .. ') (toString: ' .. direction.toString(dir) .. ')')
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -116,7 +124,15 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid, absolute direction
   -----------------------------------------------------------------------------
   function direction.changeInZ(dir)
-    error('Not yet implemented')
+    if     dir == direction.NEGATIVE_Z then return -1
+    elseif dir == direction.POSITIVE_X then return 0
+    elseif dir == direction.POSITIVE_Z then return 1
+    elseif dir == direction.NEGATIVE_X then return 0
+    elseif dir == direction.POSITIVE_Y then return 0
+    elseif dir == direction.NEGATIVE_Y then return 0
+    else
+      error('Expected absolute direction but got ' .. dir .. ' (type: ' .. type(dir) .. ') (toString: ' .. direction.toString(dir) .. ')')
+    end
   end
   
   -- Altering a direction with a relative direction
@@ -147,7 +163,41 @@ if not twf.movement.direction then
   --               if relDir is not a valid relative direction
   -----------------------------------------------------------------------------
   function direction.alter(absDir, relDir)
-    error('Not yet implemented')
+    if not direction.isAbsolute(absDir) then 
+      error('Expected absDir to be absolute, but is ' .. direction.toString(absDir))
+    end
+    if not dierction.isRelative(relDir) then
+      error('Expected relDir to be relative, but is ' .. direction.toString(relDir))
+    end
+    
+    if relDir == direction.CLOCKWISE then 
+      if     absDir == direction.NORTH then return direction.EAST
+      elseif absDir == direction.EAST  then return direction.SOUTH
+      elseif absDir == direction.SOUTH then return direction.WEST
+      elseif absDir == direction.WEST  then return direction.NORTH
+      elseif absDir == direction.UP    then return direction.UP
+      elseif absDir == direction.DOWN  then return direction.DOWN end
+    elseif relDir == direction.COUNTER_CLOCKWISE then
+      if     absDir == direction.NORTH then return direction.WEST
+      elseif absDir == direction.WEST  then return direction.SOUTH
+      elseif absDir == direction.SOUTH then return direction.EAST
+      elseif absDir == direction.EAST  then return direction.NORTH
+      elseif absDir == direction.UP    then return direction.UP
+      elseif absDir == direction.DOWN  then return direction.DOWN end
+    elseif relDir == direction.BACK then
+      if     absDir == direction.NORTH then return direction.SOUTH
+      elseif absDir == direction.SOUTH  then return direction.NORTH
+      elseif absDir == direction.WEST then return direction.EAST
+      elseif absDir == direction.EAST  then return direction.WEST
+      elseif absDir == direction.UP    then return direction.DOWN
+      elseif absDir == direction.DOWN  then return direction.UP end
+    elseif relDir == direction.FORWARD then
+      return absDir
+    elseif relDir == direction.UP then
+      return direction.UP
+    elseif relDir == direction.DOWN then 
+      return direction.DOWN
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -166,7 +216,7 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid absolute direction
   -----------------------------------------------------------------------------
   function direction.clockwiseOf(dir)
-    error('Not yet implemented')
+      return direction.alter(dir, direction.CLOCKWISE)
   end
   
   
@@ -186,7 +236,7 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid absolute direction
   -----------------------------------------------------------------------------
   function direction.counterClockwiseOf(dir)
-    error('Not yet implemented')
+    return direction.alter(dir, direction.COUNTER_CLOCKWISE)
   end
   
   -----------------------------------------------------------------------------
@@ -206,7 +256,7 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid absolute direction
   -----------------------------------------------------------------------------
   function direction.inverse(dir)
-    error('Not yet implemented')
+    return direction.alter(dir, direction.BACK)
   end
   
   -- Identify functions
@@ -228,7 +278,17 @@ if not twf.movement.direction then
   -- @return    a boolean that is true if dir is a direction, false otherwise
   -----------------------------------------------------------------------------
   function direction.isDirection(dir)
-    error('Not yet implemented')
+    if     dir == direction.NORTH   then return true 
+    elseif dir == direction.SOUTH   then return true
+    elseif dir == direction.WEST    then return true
+    elseif dir == direction.EAST    then return true
+    elseif dir == direction.UP      then return true
+    elseif dir == direction.DOWN    then return true
+    elseif dir == direction.FORWARD then return true
+    elseif dir == direction.BACK    then return true
+    elseif dir == direction.LEFT    then return true
+    elseif dir == direction.RIGHT   then return true
+    else return false end
   end
   
   -----------------------------------------------------------------------------
@@ -246,7 +306,13 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid direction
   -----------------------------------------------------------------------------
   function direction.isAbsolute(dir)
-    error('Not yet implemented')
+    if     dir == direction.NORTH   then return true 
+    elseif dir == direction.SOUTH   then return true
+    elseif dir == direction.WEST    then return true
+    elseif dir == direction.EAST    then return true
+    elseif dir == direction.UP      then return true
+    elseif dir == direction.DOWN    then return true
+    else return false end
   end
   
   -----------------------------------------------------------------------------
@@ -264,7 +330,13 @@ if not twf.movement.direction then
   -- @error     if dir is not a valid direction
   -----------------------------------------------------------------------------
   function direction.isRelative(dir)
-    error('Not yet implemented')
+    if     dir == direction.UP      then return true
+    elseif dir == direction.DOWN    then return true
+    elseif dir == direction.FORWARD then return true
+    elseif dir == direction.BACK    then return true
+    elseif dir == direction.LEFT    then return true
+    elseif dir == direction.RIGHT   then return true
+    else return false end
   end
   
   -- Serialization functions
@@ -286,7 +358,10 @@ if not twf.movement.direction then
   -- @return    a string that can be unserialized representing dir
   -- @error     if dir is not a valid direction
   function direction.serialize(dir)
-    error('Not yet implemented')
+    if not direction.isDirection(dir) then
+      error('Expected direction but got ' .. dir)
+    end
+    return textutils.serialize(dir)
   end
   
   -----------------------------------------------------------------------------
@@ -306,7 +381,13 @@ if not twf.movement.direction then
   -- @error               if the string is not a valid serialization
   -----------------------------------------------------------------------------
   function direction.unserialize(serializedDir)
-    error('Not yet implemented')
+    local dir = textutils.unserialize(serializedDir)
+    
+    if not direction.isDirection(dir) then 
+      error('Expected direction but got ' .. serializedDir)
+    end
+    
+    return dir
   end
   
   -- Miscellaneous functions
@@ -327,9 +408,20 @@ if not twf.movement.direction then
   --
   -- @param dir an absolute direction
   -- @return    a string representing the direction using cardinal language
+  -- @error     if dir is not an absolute direction
   -----------------------------------------------------------------------------
   function direction.toCardinalString(dir)
-    error('Not yet implemented')
+    if not direction.isAbsolute(dir) then 
+      error('Expected absolute direction but got ' .. dir)
+    end
+    
+    if     dir == direction.NORTH   then return 'north' 
+    elseif dir == direction.SOUTH   then return 'south'
+    elseif dir == direction.WEST    then return 'west'
+    elseif dir == direction.EAST    then return 'east'
+    elseif dir == direction.UP      then return 'up'
+    elseif dir == direction.DOWN    then return 'down'
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -343,14 +435,24 @@ if not twf.movement.direction then
   --   -- prints positive x
   --   print(direction.toCardinalString(direction.EAST))
   
-  --   -- prints east
+  --   -- prints positive x
   --   print(direction.toCardinalString(direction.POSITIVE_X))
   --
   -- @param dir an absolute direction
   -- @return    a string representing the direction using coordinate language
   -----------------------------------------------------------------------------
   function direction.toCoordinateString(dir)
-    error('Not yet implemented')
+    if not direction.isAbsolute(dir) then 
+      error('Expected absolute direction but got ' .. dir)
+    end
+    
+    if     dir == direction.POSITIVE_X   then return 'positive x' 
+    elseif dir == direction.NEGATIVE_X   then return 'negative x'
+    elseif dir == direction.POSITIVE_Y   then return 'positive y'
+    elseif dir == direction.NEGATIVE_Y   then return 'negative y'
+    elseif dir == direction.POSITIVE_Z   then return 'positive z'
+    elseif dir == direction.NEGATIVE_Z   then return 'negative z'
+    end
   end
   
   
@@ -362,17 +464,27 @@ if not twf.movement.direction then
   --   dofile('twf_movement.lua')
   --   local direction = twf.movement.direction
   --
-  --   -- prints positive x
-  --   print(direction.toCardinalString(direction.EAST))
+  --   -- prints left
+  --   print(direction.toCardinalString(direction.LEFT))
   
-  --   -- prints positive x
-  --   print(direction.toCardinalString(direction.POSITIVE_X))
+  --   -- prints right
+  --   print(direction.toCardinalString(direction.RIGHT))
   --
-  -- @param dir an absolute direction
+  -- @param dir a relative direction
   -- @return    a string representing the direction using coordinate language
   -----------------------------------------------------------------------------
   function direction.toRelativeString(dir)
-    error('Not yet implemented')
+    if not direction.isRelative(dir) then 
+      error('Expected relative direction but got ' .. dir)
+    end
+    
+    if     dir == direction.UP      then return 'up'
+    elseif dir == direction.DOWN    then return 'down'
+    elseif dir == direction.FORWARD then return 'forward'
+    elseif dir == direction.BACK    then return 'back'
+    elseif dir == direction.LEFT    then return 'left'
+    elseif dir == direction.RIGHT   then return 'right'
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -397,7 +509,21 @@ if not twf.movement.direction then
   -- @return    a string representing the direction
   -----------------------------------------------------------------------------
   function direction.toString(dir)
-    error('Not yet implemented')
+    if not direction.isDirection(dir) then
+      error('Expected direction but got ' .. dir)
+    end
+    
+    if     dir == direction.NORTH   then return 'north (-z)' 
+    elseif dir == direction.SOUTH   then return 'south (+z)'
+    elseif dir == direction.WEST    then return 'west (-x)'
+    elseif dir == direction.EAST    then return 'east (+x)'
+    elseif dir == direction.UP      then return 'up (+y)'
+    elseif dir == direction.DOWN    then return 'down (-y)'
+    elseif dir == direction.FORWARD then return 'forward'
+    elseif dir == direction.BACK    then return 'back'
+    elseif dir == direction.LEFT    then return 'left'
+    elseif dir == direction.RIGHT   then return 'right'
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -416,7 +542,14 @@ if not twf.movement.direction then
   -- @error      if dir1 isn't a direction or dir2 isn't a direction
   -----------------------------------------------------------------------------
   function direction.equals(dir1, dir2)
-    error('Not yet implemented')
+    if not direction.isDirection(dir1) then
+      error('Expected direction for dir1 but got ' .. dir1)
+    end
+    if not direction.isDirection(dir2) then
+      error('Expected direction for dir2 but got ' .. dir2)
+    end
+    
+    return dir1 == dir2
   end
   
   
@@ -435,7 +568,11 @@ if not twf.movement.direction then
   -- @error     if dir isn't a direction
   -----------------------------------------------------------------------------
   function direction.hashCode(dir)
-    error('Not yet implemented')
+    if not direction.isDirection(dir) then 
+      error('Expected direction but got ' .. dir)
+    end
+    
+    return 31 * dir
   end
   
   twf.movement.direction = direction
@@ -519,7 +656,9 @@ if not twf.movement.position then
   -- @return      the euclidean distance squared to the other point
   -----------------------------------------------------------------------------
   function Position:euclideanDistanceSquaredTo(other)
-    error('Not yet implemented')
+    return (self.x - other.x) * (self.x - other.x) +
+           (self.y - other.y) * (self.y - other.y) +
+           (self.z - other.z) * (self.z - other.z)
   end
   
   -----------------------------------------------------------------------------
@@ -543,7 +682,7 @@ if not twf.movement.position then
   --              other point
   -----------------------------------------------------------------------------
   function Position:euclideanDistanceTo(other)
-    error('Not yet implemented')
+    return math.sqrt(self:euclidanceDistanceSquaredTo(other))
   end
   
   -----------------------------------------------------------------------------
@@ -566,7 +705,7 @@ if not twf.movement.position then
   -- @return      the manhattan distance to the other point
   -----------------------------------------------------------------------------
   function Position:manhattanDistance(other)
-    error('Not yet implemented')
+    return math.abs(self.x - other.x) + math.abs(self.y - other.y) + math.abs(self.z - other.z)
   end
   
   -----------------------------------------------------------------------------
@@ -589,7 +728,7 @@ if not twf.movement.position then
   -- @error       if this position and the other position are the same
   -----------------------------------------------------------------------------
   function Position:vectorTo(other)
-    error('Not yet implemented')
+    return twf.movement.Vector:new({x = (other.x - self.x), y = (other.y - self.y), z = (other.z - self.z)})
   end
   
   -- Serialization
@@ -609,7 +748,13 @@ if not twf.movement.position then
   -- @return a string serialization of this instance
   -----------------------------------------------------------------------------
   function Position:serialize()
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.x = self.x
+    resultTable.y = self.y
+    resultTable.z = self.z
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -628,7 +773,13 @@ if not twf.movement.position then
   -- @return           the position the serialized string represents
   -----------------------------------------------------------------------------
   function Position.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local x = serTable.x
+    local y = serTable.y
+    local z = serTable.z
+    
+    return Position:new({x = x, y = y, z = z})
   end
   
   -- Miscellaneous
@@ -648,7 +799,7 @@ if not twf.movement.position then
   -- @returns twf.movement.Vector representation of this position
   -----------------------------------------------------------------------------  
   function Position:toVector()
-    error('Not yet implemented')
+    return twf.movement.Vector:new({deltaX = self.x, deltaY = self.y, deltaZ = self.z})
   end
   
   -----------------------------------------------------------------------------
@@ -669,7 +820,7 @@ if not twf.movement.position then
   -- @return a position instance with the same state as this one
   -----------------------------------------------------------------------------
   function Position:clone()
-    error('Not yet implemented')
+    return Position:new({x = self.x, y = self.y, z = self.z})
   end
   
   -----------------------------------------------------------------------------
@@ -685,7 +836,7 @@ if not twf.movement.position then
   -- @return a human-readable string representing this position
   -----------------------------------------------------------------------------
   function Position:toString()
-    error('Not yet implemented')
+    return '(' .. self.x .. ', ' .. self.y .. ', ' .. self.z .. ')'
   end
   
   -----------------------------------------------------------------------------
@@ -704,7 +855,10 @@ if not twf.movement.position then
   -- @return      boolean true if they are logically equal, false otherwise
   -----------------------------------------------------------------------------
   function Position:equals(other)
-    error('Not yet implemented')
+    if self.x ~= other.x then return false end
+    if self.y ~= other.y then return false end
+    if self.z ~= other.z then return false end
+    return true
   end
   
   -----------------------------------------------------------------------------
@@ -721,7 +875,13 @@ if not twf.movement.position then
   -- @return the hash code of this position
   -----------------------------------------------------------------------------
   function Position:hashCode()
-    error('Not yet implemented')
+    local result = 31
+    
+    result = 17 * result + self.x
+    result = 17 * result + self.y
+    result = 17 * result + self.z
+    
+    return result
   end
   
   twf.movement.Position = Position
@@ -771,10 +931,30 @@ if not twf.movement.Vector then
   -- @return a new instance of vector
   -----------------------------------------------------------------------------
   function Vector:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
   end
   
   -- Math
+  
+  -----------------------------------------------------------------------------
+  -- Calculates the squared magnitude of this vector
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local Vector = twf.movement.Vector
+  --   local v = Vector:new({deltaX = 3, deltaY = 0, deltaZ = 4})
+  --   local mag = v:squaredMagnitude()
+  --   -- prints 25
+  --   print(mag)
+  --
+  -- @return squared magnitude of this vector
+  -----------------------------------------------------------------------------
+  function Vector:squaredMagnitude()
+    return (deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ)
+  end
   
   -----------------------------------------------------------------------------
   -- Calculates the magnitude of this vector
@@ -790,7 +970,7 @@ if not twf.movement.Vector then
   -- @return magnitude of this vector
   -----------------------------------------------------------------------------
   function Vector:magnitude()
-    error('Not yet implemented')
+    return math.sqrt(self:squaredMagnitude())
   end
   
   -----------------------------------------------------------------------------
@@ -802,14 +982,19 @@ if not twf.movement.Vector then
   --   local Vector = twf.movement.Vector
   --   local v = Vector:new({deltaX = 2, deltaY = 0, deltaZ = 2})
   --   local uv = v:normalized()
-  --   -- prints <1, 0, 1>
+  --   -- prints <0.707, 0, 0.707>
   --   print(uv:toString())
   --
   -- @return Vector object that points in the same direction but with
   --         magnitude 1
   -----------------------------------------------------------------------------
   function Vector:normalized()
-    error('Not yet implemented')
+    local magn = self:magnitude()
+    return Vector:new({
+      deltaX = self.deltaX / magn,
+      deltaY = self.deltaY / magn,
+      deltaZ = self.deltaZ / magn
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -828,7 +1013,11 @@ if not twf.movement.Vector then
   -- @return the vector result from this instance added to other
   -----------------------------------------------------------------------------
   function Vector:add(other)
-    error('Not yet implemented')
+    return Vector:new({
+      deltaX = self.deltaX + other.deltaX, 
+      deltaY = self.deltaY + other.deltaY, 
+      deltaZ = self.deltaZ + other.deltaZ
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -843,7 +1032,11 @@ if not twf.movement.Vector then
   --   print(v2:toString())
   --   
   function Vector:multiply(scalar)
-    error('Not yet implemented')
+    return Vector:new({
+      deltaX = self.deltaX * scalar,
+      deltaY = self.deltaY * scalar,
+      deltaZ = self.deltaZ * scalar
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -862,7 +1055,11 @@ if not twf.movement.Vector then
   -- @return the vector result when other is subtracted from this instance
   -----------------------------------------------------------------------------
   function Vector:subtract(other)
-    error('Not yet implemented')
+    return Vector:new({
+      deltaX = self.deltaX - other.deltaX, 
+      deltaY = self.deltaY - other.deltaY, 
+      deltaZ = self.deltaZ - other.deltaZ
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -879,7 +1076,11 @@ if not twf.movement.Vector then
   -- @return vector object that is the inverse of this instance
   -----------------------------------------------------------------------------
   function Vector:inverse()
-    error('Not yet implemented')
+    return Vector:new({
+      deltaX = -self.deltaX, 
+      deltaY = -self.deltaY, 
+      deltaZ = -self.deltaZ
+    })
   end
   
   -- Serialization
@@ -899,7 +1100,13 @@ if not twf.movement.Vector then
   -- @return string serialization of this vector
   -----------------------------------------------------------------------------
   function Vector:serialize()
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.deltaX = self.deltaX
+    resultTable.deltaY = self.deltaY
+    resultTable.deltaZ = self.deltaZ
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -917,7 +1124,13 @@ if not twf.movement.Vector then
   -- @param serialized the serialized vector object
   -- @return vector object the string was representing
   function Vector.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local deltaX = serTable.deltaX
+    local deltaY = serTable.deltaY
+    local deltaZ = serTable.deltaZ
+    
+    return Vector:new({deltaX = deltaX, deltaY = deltaY, deltaZ = deltaZ})
   end
   
   -- Miscellaneous
@@ -936,7 +1149,7 @@ if not twf.movement.Vector then
   -- @return twf.movement.Position representation of this Vector
   -----------------------------------------------------------------------------
   function Vector:toPosition()
-    error('Not yet implemented')
+    return twf.movement.Position:new({x = self.deltaX, y = self.deltaY, z = self.deltaZ})
   end
   
   -----------------------------------------------------------------------------
@@ -956,7 +1169,7 @@ if not twf.movement.Vector then
   -- @return vector clone of this instance
   -----------------------------------------------------------------------------
   function Vector:clone()
-    error('Not yet implemented')
+    return Vector:new({deltaX = self.deltaX, deltaY = self.deltaY, deltaZ = self.deltaZ})
   end
   
   -----------------------------------------------------------------------------
@@ -972,7 +1185,7 @@ if not twf.movement.Vector then
   -- @return string representation of this vector
   -----------------------------------------------------------------------------
   function Vector:toString()
-    error('Not yet implemented')
+    return '<' .. self.deltaX .. ', ' .. self.deltaY .. ', ' .. self.deltaZ .. '>'
   end
   
   -----------------------------------------------------------------------------
@@ -990,7 +1203,11 @@ if not twf.movement.Vector then
   --         false otherwise
   -----------------------------------------------------------------------------
   function Vector:equals(other)
-    error('Not yet implemented')
+    if self.deltaX ~= other.deltaX then return false end
+    if self.deltaY ~= other.deltaY then return false end
+    if self.deltaZ ~= other.deltaZ then return false end
+    
+    return true
   end
   
   -----------------------------------------------------------------------------
@@ -1007,7 +1224,13 @@ if not twf.movement.Vector then
   -- @return this vectors hash code
   -----------------------------------------------------------------------------
   function Vector:hashCode()
-    error('Not yet implemented')
+    local result = 37
+    
+    result = result * 19 + self.deltaX
+    result = result * 19 + self.deltaY
+    result = result * 19 + self.deltaZ
+    
+    return result
   end
   
   twf.movement.Vector = Vector
@@ -1064,7 +1287,11 @@ if not twf.movement.MovementResult then
   -- @error                if movementResult is not a valid code
   -----------------------------------------------------------------------------
   function MovementResult.isSuccess(movementResult)
-    error('Not yet implemented')
+    if movementResult == MovementResult.MOVE_SUCCESS then 
+      return true
+    end
+    
+    return false
   end
   
   -----------------------------------------------------------------------------
@@ -1083,7 +1310,12 @@ if not twf.movement.MovementResult then
   --                       code
   -----------------------------------------------------------------------------
   function MovementResult.toString(movementResult)
-    error('Not yet implemented')
+    if     movementResult == MovementResult.MOVE_SUCCESS then return 'movement succeeded'
+    elseif movementResult == MovementResult.MOVE_FAILURE then return 'movement failed: unknown'
+    elseif movementResult == MovementResult.MOVE_NO_FUEL then return 'movement failed: not enough fuel'
+    elseif movementResult == MovementResult.MOVE_BLOCKED then return 'movement failed: blocked' end
+    
+    error('Expected movement result but got ' .. movementResult)
   end
   
   twf.movement.MovementResult = MovementResult
@@ -1403,7 +1635,18 @@ if not twf.movement.action then
     -- @return  a new instance of this action
     -----------------------------------------------------------------------------
     function TurnAction:new(o)
-      error('Not yet implemented')
+      o = o or {}
+      setmetatable(o, self)
+      self.__index = self
+      
+      local validDir =       o.direction == twf.movement.direction.LEFT
+      validDir = validDir or o.direction == twf.movement.direction.RIGHT
+      
+      if not validDir then 
+        error('Expected LEFT or RIGHT but got ' .. o.direction)
+      end
+      
+      return o
     end
     
     -----------------------------------------------------------------------------
@@ -1416,7 +1659,9 @@ if not twf.movement.action then
     --   local ta = twf.movement.action.TurnAction:new({direction = twf.movement.direction.LEFT})
     --   local succ = ta:turn() -- like turtle.turnLeft()
     function TurnAction:turn()
-      error('Not yet implemented')
+      if     self.direction == twf.movement.direction.LEFT  then return turtle.turnLeft() 
+      elseif self.direction == twf.movement.direction.RIGHT then return turtle.turnRight()
+      else error('TurnAction:turn() invalid direction ' .. self.direction)
     end
     
     -----------------------------------------------------------------------------
@@ -1433,7 +1678,13 @@ if not twf.movement.action then
     -- @return twf.movement.MovementResult result of the movement attempt
     -----------------------------------------------------------------------------
     function TurnAction:perform()
-      error('Not yet implemented')
+      if turtle.getFuelLevel() < 1 then 
+        return MovementResult.MOVE_NO_FUEL
+      elseif self:turn() then
+        return MovementResult.MOVE_SUCCESS
+      else
+        return MovementResult.MOVE_FAILURE
+      end
     end
     
     -----------------------------------------------------------------------------
@@ -1452,7 +1703,7 @@ if not twf.movement.action then
     -- @param stateTurtle stateful turtle to be updated
     -----------------------------------------------------------------------------
     function TurnAction:updateState(stateTurtle)
-      error('Not yet implemented')
+      stateTurtle.orientation = twf.movement.direction.alter(stateTurtle.orientation, self.direction)
     end
     
     -----------------------------------------------------------------------------
@@ -1476,7 +1727,11 @@ if not twf.movement.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function TurnAction:serialize()
-      error('Not yet implemented')
+      local resultTable = {}
+      
+      resultTable.direction = self.direction
+      
+      return textutils.serialize(resultTable)
     end
     
     -----------------------------------------------------------------------------
@@ -1492,7 +1747,11 @@ if not twf.movement.action then
     -- @return           action instance the serialized string represented
     -----------------------------------------------------------------------------
     function TurnAction.unserialize(serialized)
-      error('Not yet implemented')
+      local serTable = textutils.unserialize(serialized)
+      
+      local direction = serTable.direction
+      
+      return TurnAction:new({direction = direction})
     end
     
     action.TurnAction = TurnAction
@@ -1623,7 +1882,19 @@ if not twf.movement.StatefulTurtle then
   -- @param action the action to prepare to do
   -----------------------------------------------------------------------------
   function StatefulTurtle:prepareAction(action)
-    error('Not yet implemented')
+    self.fuelLevel = turtle.getFuelLevel()
+    
+    local serTable = {}
+    
+    serTable.stateTurtle = self:serialize()
+    serTable.actionName = action.name()
+    serTable.action = action:serialize()
+    
+    local toSave = textutils.serialize(serTable)
+    
+    local file = fs.open(actionRecoveryFile, 'w')
+    file.write(toSave)
+    file.close()
   end
   
   -----------------------------------------------------------------------------
@@ -1641,7 +1912,7 @@ if not twf.movement.StatefulTurtle then
   -- @param action the action that was prepared
   -----------------------------------------------------------------------------
   function StatefulTurtle:finishAction(action)
-    error('Not yet implemented')
+    fs.delete(actionRecoveryFile)
   end
   
   -----------------------------------------------------------------------------
@@ -1657,10 +1928,80 @@ if not twf.movement.StatefulTurtle then
   -- @error if the fuel level is not in a valid state
   -----------------------------------------------------------------------------
   function StatefulTurtle:recoverAction()
-    error('Not yet implemented')
+    local file = fs.open(actionRecoveryFile, 'r')
+    local saved = file.readAll()
+    file.close()
+    
+    local serTable = textutils.unserialize(saved)
+    
+    serTable.stateTurtle = StatefulTurtle.unserialize(serTable.stateTurtle)
+    
+    if serTable.actionName == twf.movement.action.TurnAction.name() then 
+      serTable.action = twf.movement.action.TurnAction.unserialize(serTable.action)
+    elseif serTable.actionname == twf.movement.action.MoveAction.name() then
+      serTable.action = twf.movement.action.MoveAction.unserialize(serTable.action)
+    else
+      error('Unsupported action for recovery: ' .. serTable.actionName)
+    end
+    
+    self.fuelLevel = turtle.getFuelLevel()
+    self.position = serTable.stateTurtle.position
+    
+    if self.fuelLevel == serTable.stateTurtle.fuelLevel then 
+      return
+    elseif self.fuelLevel == serTable.stateTurtle.fuelLevel + 1 then 
+      action:updateState(self)
+      return
+    else 
+      error('Invalid fuel level: was ' .. serTable.stateTurtle.fuelLevel .. ', is now ' .. self.fuelLevel)
+    end
   end
   
   -- Movement
+  
+  -----------------------------------------------------------------------------
+  -- Moves the turtle in the specified direction the specified numebr of times.
+  -- Upon falure, the turtle may be anywhere along the path, but the position 
+  -- and orientation of this instance will reflect the turtles true position 
+  -- and orientation.
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local succ = st:move(twf.movement.direction.FORWARD, 2)
+  --   if not twf.movement.MovementResult.isSuccess(succ) then 
+  --     print('Move failed!')
+  --   end
+  -- 
+  -- @param direction the relative direction to move in
+  -- @param times     (optional) number of times to move
+  -- @return          twf.movement.MovementResult the result of the last 
+  --                  movement
+  -- @see twf.movement.StatefulTurtle#prepareAction (Action Recovery)
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:move(direction, times)
+    times = times or 1
+    
+    local result = nil
+    
+    for i = 1, times, 1 do 
+      local act = twf.movement.action.MoveAction:new({direction = direction})
+      self:prepareAction(act)
+      result = act:perform()
+      local success = twf.movement.MovementResult.isSuccess(result)
+      if success then 
+        act:updateState(self)
+        self:saveToFile()
+      end
+      self:finishAction(act)
+      
+      if not success then 
+        return result
+      end
+    end
+    
+    return result
+  end
   
   -----------------------------------------------------------------------------
   -- Moves the turtle forward the specified number of times. Upon failure, the
@@ -1683,27 +2024,7 @@ if not twf.movement.StatefulTurtle then
   -- @see twf.movement.StatefulTurtle#prepareAction (Action Recovery)
   -----------------------------------------------------------------------------
   function StatefulTurtle:moveForward(times)
-    times = times or 1
-    
-    local result = nil
-    
-    for i = 1, times, 1 do 
-      local act = twf.movement.action.MoveAction:new({direction = twf.movement.direction.FORWARD})
-      self:prepareAction(act)
-      result = act:perform()
-      local success = twf.movement.MovementResult.isSuccess(result)
-      if success then 
-        act:updateState(self)
-        self:saveToFile()
-      end
-      self:finishAction(act)
-      
-      if not success then 
-        return result
-      end
-    end
-    
-    return result
+    return self:move(twf.movement.direction.FORWARD, times)
   end
   
   -----------------------------------------------------------------------------
@@ -1726,7 +2047,7 @@ if not twf.movement.StatefulTurtle then
   -- @return twf.movement.MovementResult the result of the movement
   -----------------------------------------------------------------------------
   function StatefulTurtle:moveBack(times)
-    error('Not yet implemented')
+    return self:move(twf.movement.direction.BACK, times)
   end
   
   -----------------------------------------------------------------------------
@@ -1749,7 +2070,7 @@ if not twf.movement.StatefulTurtle then
   -- @return twf.movement.MovementResult the result of the movement
   -----------------------------------------------------------------------------
   function StatefulTurtle:moveUp(times)
-    error('Not yet implemented')
+    return self:move(twf.movement.direction.UP, times)
   end
   
   -----------------------------------------------------------------------------
@@ -1772,10 +2093,55 @@ if not twf.movement.StatefulTurtle then
   -- @return twf.movement.MovementResult the result of the movement
   -----------------------------------------------------------------------------
   function StatefulTurtle:moveDown(times)
-    error('Not yet implemented')
+    return self:move(twf.movement.direction.DOWN, times)
   end
   
   -- Turning
+  
+  
+  -----------------------------------------------------------------------------
+  -- Turns the turtle in the specified direction the specified numebr of times.
+  -- Upon falure, the turtle may be anywhere along the path, but the position 
+  -- and orientation of this instance will reflect the turtles true position 
+  -- and orientation.
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local succ = st:move(twf.movement.direction.LEFT, 2)
+  --   if not twf.movement.MovementResult.isSuccess(succ) then 
+  --     print('Turn failed!')
+  --   end
+  -- 
+  -- @param direction the relative direction to turn in
+  -- @param times     (optional) number of times to turn
+  -- @return          twf.movement.MovementResult the result of the last 
+  --                  movement
+  -- @see twf.movement.StatefulTurtle#prepareAction (Action Recovery)
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:turn(direction, times)
+    times = times or 1
+    
+    local result = nil
+    
+    for i = 1, times, 1 do 
+      local act = twf.movement.action.TurnAction:new({direction = direction})
+      self:prepareAction(act)
+      result = act:perform()
+      local success = twf.movement.MovementResult.isSuccess(result)
+      if success then 
+        act:updateState(self)
+        self:saveToFile()
+      end
+      self:finishAction(act)
+      
+      if not success then 
+        return result
+      end
+    end
+    
+    return result
+  end
   
   -----------------------------------------------------------------------------
   -- Turns the turtle left the specified number of times. Upon failure, the
@@ -1797,7 +2163,7 @@ if not twf.movement.StatefulTurtle then
   -- @return twf.movement.MovementResult the result of the movement
   -----------------------------------------------------------------------------
   function StatefulTurtle:turnLeft(times)
-    error('Not yet implemented')
+    return self:turn(twf.movement.direction.LEFT, times)
   end
   
   -----------------------------------------------------------------------------
@@ -1820,7 +2186,7 @@ if not twf.movement.StatefulTurtle then
   -- @return twf.movement.MovementResult the result of the movement
   -----------------------------------------------------------------------------
   function StatefulTurtle:turnRight(times)
-    error('Not yet implemented')
+    return self:turn(twf.movement.direction.RIGHT, times)
   end
   
   -- Serialization
@@ -1841,7 +2207,15 @@ if not twf.movement.StatefulTurtle then
   -- @return a string serialization of this instance
   -----------------------------------------------------------------------------
   function StatefulTurtle:serialize()
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.actionRecoveryFile = self.actionRecoveryFile
+    resultTable.saveFile = self.saveFile
+    resultTable.orientation = twf.movement.direction.serialize(self.orientation)
+    resultTable.position = self.position:serialize()
+    resultTable.fuelLevel = self.fuelLevel
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1860,7 +2234,21 @@ if not twf.movement.StatefulTurtle then
   -- @return the instance of stateful turtle the string represents
   -----------------------------------------------------------------------------
   function StatefulTurtle.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local actionRecoveryFile = serTable.actionRecoveryFile
+    local saveFile = serTable.saveFile
+    local orientation = twf.movement.direction.unserialize(serTable.orientation)
+    local position = twf.movement.Position:unserialize(serTable.position)
+    local fuelLevel = serTable.fuelLevel
+    
+    return StatefulTurtle:new({
+      actionRecoveryFile = actionRecoveryFile,
+      saveFile = saveFile,
+      orientation = orientation,
+      position = position,
+      fuelLevel = fuelLevel
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -1883,7 +2271,29 @@ if not twf.movement.StatefulTurtle then
   -- @return the saved stateful turtle or a new one
   -----------------------------------------------------------------------------
   function StatefulTurtle.loadOrInit(filePrefix)
-    error('Not yet implemented')
+    local saveFile = filePrefix + '.dat'
+    local actionRecoveryFile = filePrefix + '_action_recovery.dat'
+    
+    if fs.exists(actionRecoveryFile) then 
+      local st = StatefulTurtle:new({
+        saveFile = saveFile,
+        actionRecoveryFile = actionRecoveryFile
+      })
+      st:recoverAction()
+      return st
+    elseif fs.exists(saveFile) then 
+      local file = fs.open(saveFile, 'r')
+      local saved = file.readAll()
+      file.close()
+      
+      return StatefulTurtle:unserialize(saved)
+    else 
+      return StatefulTurtle:new({
+        saveFile = saveFile,
+        actionRecoveryFile = actionRecoveryFile,
+        fuelLevel = turtle.getFuelLevel()
+      })
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1896,7 +2306,9 @@ if not twf.movement.StatefulTurtle then
   --   st:saveToFile()
   -----------------------------------------------------------------------------
   function StatefulTurtle:saveToFile()
-    error('Not yet implemented')
+    local file = fs.open(self.saveFile, 'w')
+    file.write(self:serialize())
+    file.close()
   end
   
   -- Miscellaneous
@@ -1915,7 +2327,13 @@ if not twf.movement.StatefulTurtle then
   -- @return a copy of this instance
   -----------------------------------------------------------------------------
   function StatefulTurtle:clone()
-    error('Not yet implemented')
+    return StatefulTurtle:new({
+      saveFile = self.saveFile,
+      actionRecoveryFile = self.actionRecoveryFile,
+      fuelLevel = self.fuelLevel,
+      position = self.position:clone(),
+      orientation = self.orientation
+    })
   end
   
   -----------------------------------------------------------------------------
@@ -1931,7 +2349,7 @@ if not twf.movement.StatefulTurtle then
   -- @return human readable representation of this instance
   -----------------------------------------------------------------------------
   function StatefulTurtle:toString()
-    error('Not yet implemented')
+    return 'facing ' .. twf.movement.direction.toCardinalString(self.orientation) .. ' at ' .. self.position:toString()
   end
   
   -----------------------------------------------------------------------------
@@ -1949,7 +2367,17 @@ if not twf.movement.StatefulTurtle then
   -- @return      if the two stateful turtles are logically equivalent
   -----------------------------------------------------------------------------
   function StatefulTurtle:equals(other)
-    error('Not yet implemented')
+    if self.actionRecoveryFile ~= other.actionRecoveryFile then return false end
+    if self.saveFile ~= other.saveFile then return false end
+    if self.orientation ~= other.orientation then return false end
+    if self.position == nil then 
+      if other.position ~= nil then return false end
+    else
+      if other.position == nil then return false end
+      if not self.position:equals(other.position) then return false end
+    end
+    if self.fuelLevel ~= other.fuelLevel then return false end
+    return true
   end
   
   -----------------------------------------------------------------------------
@@ -1965,7 +2393,25 @@ if not twf.movement.StatefulTurtle then
   -- @return number hash code of this stateful turtle
   -----------------------------------------------------------------------------
   function StatefulTurtle:hashCode()
-    error('Not yet implemented')
+    local result = 83
+    
+    if self.actionRecoveryFile ~= nil then
+      for i = 1, #self.actionRecoveryFile do 
+        result = 19 * string.byte(self.actionRecoveryFile, i)
+      end
+    end
+    
+    if self.saveFile ~= nil then 
+      for i = 1, #self.saveFile do
+        result = 17 * result + string.byte(self.saveFile, i)
+      end
+    end
+    
+    result = 23 * result + self.orientation
+    result = 17 * result + self.position:hashCode()
+    result = 17 * result + self.fuelLevel
+    
+    return result
   end
   
   twf.movement.StatefulTurtle = StatefulTurtle
