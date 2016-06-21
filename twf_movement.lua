@@ -166,7 +166,7 @@ if not twf.movement.direction then
     if not direction.isAbsolute(absDir) then 
       error('Expected absDir to be absolute, but is ' .. direction.toString(absDir))
     end
-    if not dierction.isRelative(relDir) then
+    if not direction.isRelative(relDir) then
       error('Expected relDir to be relative, but is ' .. direction.toString(relDir))
     end
     
@@ -1518,13 +1518,13 @@ if not twf.movement.action then
     -----------------------------------------------------------------------------
     function MoveAction:perform()
       if self:detect() then 
-        return MovementResult.MOVE_BLOCKED 
+        return twf.movement.MovementResult.MOVE_BLOCKED 
       elseif turtle.getFuelLevel() < 1 then
-        return MovementResult.NO_FUEL
+        return twf.movement.MovementResult.NO_FUEL
       elseif self:move() then 
-        return MovementResult.MOVE_SUCCESS
+        return twf.movement.MovementResult.MOVE_SUCCESS
       else
-        return MovementResult.MOVE_FAILURE
+        return twf.movement.MovementResult.MOVE_FAILURE
       end
     end
     
@@ -1661,7 +1661,7 @@ if not twf.movement.action then
     function TurnAction:turn()
       if     self.direction == twf.movement.direction.LEFT  then return turtle.turnLeft() 
       elseif self.direction == twf.movement.direction.RIGHT then return turtle.turnRight()
-      else error('TurnAction:turn() invalid direction ' .. self.direction)
+      else error('TurnAction:turn() invalid direction ' .. self.direction) end
     end
     
     -----------------------------------------------------------------------------
@@ -1679,11 +1679,11 @@ if not twf.movement.action then
     -----------------------------------------------------------------------------
     function TurnAction:perform()
       if turtle.getFuelLevel() < 1 then 
-        return MovementResult.MOVE_NO_FUEL
+        return twf.movement.MovementResult.MOVE_NO_FUEL
       elseif self:turn() then
-        return MovementResult.MOVE_SUCCESS
+        return twf.movement.MovementResult.MOVE_SUCCESS
       else
-        return MovementResult.MOVE_FAILURE
+        return twf.movement.MovementResult.MOVE_FAILURE
       end
     end
     
@@ -1892,7 +1892,7 @@ if not twf.movement.StatefulTurtle then
     
     local toSave = textutils.serialize(serTable)
     
-    local file = fs.open(actionRecoveryFile, 'w')
+    local file = fs.open(self.actionRecoveryFile, 'w')
     file.write(toSave)
     file.close()
   end
@@ -1912,7 +1912,7 @@ if not twf.movement.StatefulTurtle then
   -- @param action the action that was prepared
   -----------------------------------------------------------------------------
   function StatefulTurtle:finishAction(action)
-    fs.delete(actionRecoveryFile)
+    fs.delete(self.actionRecoveryFile)
   end
   
   -----------------------------------------------------------------------------
@@ -1928,7 +1928,7 @@ if not twf.movement.StatefulTurtle then
   -- @error if the fuel level is not in a valid state
   -----------------------------------------------------------------------------
   function StatefulTurtle:recoverAction()
-    local file = fs.open(actionRecoveryFile, 'r')
+    local file = fs.open(self.actionRecoveryFile, 'r')
     local saved = file.readAll()
     file.close()
     
@@ -1946,11 +1946,12 @@ if not twf.movement.StatefulTurtle then
     
     self.fuelLevel = turtle.getFuelLevel()
     self.position = serTable.stateTurtle.position
+    self.orientation = serTable.stateTurtle.orientation
     
     if self.fuelLevel == serTable.stateTurtle.fuelLevel then 
       return
-    elseif self.fuelLevel == serTable.stateTurtle.fuelLevel + 1 then 
-      action:updateState(self)
+    elseif self.fuelLevel == serTable.stateTurtle.fuelLevel - 1 then 
+      serTable.action:updateState(self)
       return
     else 
       error('Invalid fuel level: was ' .. serTable.stateTurtle.fuelLevel .. ', is now ' .. self.fuelLevel)
@@ -2239,7 +2240,7 @@ if not twf.movement.StatefulTurtle then
     local actionRecoveryFile = serTable.actionRecoveryFile
     local saveFile = serTable.saveFile
     local orientation = twf.movement.direction.unserialize(serTable.orientation)
-    local position = twf.movement.Position:unserialize(serTable.position)
+    local position = twf.movement.Position.unserialize(serTable.position)
     local fuelLevel = serTable.fuelLevel
     
     return StatefulTurtle:new({
@@ -2271,8 +2272,8 @@ if not twf.movement.StatefulTurtle then
   -- @return the saved stateful turtle or a new one
   -----------------------------------------------------------------------------
   function StatefulTurtle.loadOrInit(filePrefix)
-    local saveFile = filePrefix + '.dat'
-    local actionRecoveryFile = filePrefix + '_action_recovery.dat'
+    local saveFile = filePrefix .. '.dat'
+    local actionRecoveryFile = filePrefix .. '_action_recovery.dat'
     
     if fs.exists(actionRecoveryFile) then 
       local st = StatefulTurtle:new({
@@ -2280,19 +2281,23 @@ if not twf.movement.StatefulTurtle then
         actionRecoveryFile = actionRecoveryFile
       })
       st:recoverAction()
+      st:saveToFile()
+      st:finishAction()
       return st
     elseif fs.exists(saveFile) then 
       local file = fs.open(saveFile, 'r')
       local saved = file.readAll()
       file.close()
       
-      return StatefulTurtle:unserialize(saved)
+      return StatefulTurtle.unserialize(saved)
     else 
-      return StatefulTurtle:new({
+      local st = StatefulTurtle:new({
         saveFile = saveFile,
         actionRecoveryFile = actionRecoveryFile,
         fuelLevel = turtle.getFuelLevel()
       })
+      st:saveToFile()
+      return st
     end
   end
   
