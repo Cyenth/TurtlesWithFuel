@@ -13,8 +13,7 @@ The actionpath file is a serialization of an actionpath - which can be created m
 Here is an example of such a program for a cobblestone generator:
 
     dofile('twf_actionpath.lua') -- Import TWF actionpaths
-    
-    twf.actionpath.action.ActionPath:new({
+    twf.actionpath.ActionPath:new({
       head = twf.actionpath.action.SelectorAction:new({
         children = {
           twf.actionpath.action.SequenceAction:new({
@@ -24,25 +23,25 @@ Here is an example of such a program for a cobblestone generator:
                 slots = { 16 },
                 countCheck = 'exact'
               }),
-              twf.actionpath.action.Repeater({
-                child = twf.actionpath.action.DieOnFailure({
-                  child = twf.actionpath.action.MoveResultInterpreter({
-                    child = twf.actionpath.action.TurnAction:new({
+              twf.actionpath.action.Repeater:new({
+                child = twf.actionpath.action.DieOnFailure:new({
+                  child = twf.actionpath.action.MoveResultInterpreter:new({
+                    child = twf.movement.action.TurnAction:new({
                       direction = twf.movement.direction.RIGHT
                     })
                   })
                 }),
                 times = 2
-              })
+              }),
               twf.actionpath.action.RetryOnFailure:new({
                 child = twf.actionpath.action.DropAction:new({
                   dropBy = 'all', direction = twf.movement.direction.FORWARD
                 })
               }),
-              twf.actionpath.action.Repeater({
-                child = twf.actionpath.action.DieOnFailure({
-                  child = twf.actionpath.action.MoveResultInterpreter({
-                    child = twf.actionpath.action.TurnAction:new({
+              twf.actionpath.action.Repeater:new({
+                child = twf.actionpath.action.DieOnFailure:new({
+                  child = twf.actionpath.action.MoveResultInterpreter:new({
+                    child = twf.movement.action.TurnAction:new({
                       direction = twf.movement.direction.RIGHT
                     })
                   })
@@ -58,4 +57,4 @@ Here is an example of such a program for a cobblestone generator:
           })
         }
       })
-    }):SaveToFile('cobble_generator.actionpath')
+    }):saveToFile('cobblestone.actionpath')

@@ -367,7 +367,7 @@ if not twf.actionpath.ActionPath then
     for i = 1, #self.registeredActions do 
       local act = self.registeredActions[i]
       if act.name() == name then 
-        return act.unserialize(serAction, self)
+        return act.unserializeObject(serAction, self)
       end
     end
     
@@ -684,7 +684,7 @@ if not twf.actionpath.action.SequenceAction then
     
     if res == twf.actionpath.ActionResult.SUCCESS then      
       self.currentIndex = self.currentIndex + 1
-      if self.currentIndex > self.children.count then 
+      if self.currentIndex > #self.children then 
         self.currentIndex = 1
         return res
       end
@@ -1817,6 +1817,8 @@ if not twf.actionpath.action.Repeater then
         self.counter = 0
         return twf.actionpath.ActionResult.SUCCESS
       end
+      
+      return twf.actionpath.ActionResult.RUNNING
     elseif res == twf.actionpath.ActionResult.RUNNING then 
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
@@ -1824,7 +1826,7 @@ if not twf.actionpath.action.Repeater then
       return res
     end
     
-    error('Should not get here')
+    error('Should not get here; res = ' .. res)
   end
   
   -----------------------------------------------------------------------------
@@ -2331,7 +2333,7 @@ if not twf.actionpath.action.MoveResultInterpreter then
     
     stateTurtle:prepareAction(self.child)
     local res = self.child:perform(stateTurtle, pathState)
-    if twf.movement.MoveResult.isSuccess(res) then 
+    if twf.movement.MovementResult.isSuccess(res) then 
       self.child:updateState(stateTurtle, pathState)
       return twf.actionpath.ActionResult.SUCCESS
     else 
@@ -3430,15 +3432,15 @@ if not twf.actionpath.action.InventoryCheckAction then
     
     for i = 1, 16 do 
       local allowed = false
-      for j = 1, #slots do 
-        if slots[j] == i then 
+      for j = 1, #self.slots do 
+        if self.slots[j] == i then 
           allowed = true
           break
         end
       end
       
       if not allowed then 
-        inv.setItemDetailAt(i, nil)
+        inv:setItemDetailAt(i, nil)
       end
     end
     
@@ -3471,7 +3473,7 @@ if not twf.actionpath.action.InventoryCheckAction then
     local totalCount = 0
     
     for i = 1, 16 do 
-      local item = relevantInventory.getItemDetailAt(i)
+      local item = relevantInventory:getItemDetailAt(i)
       
       if item and self:itemMatches(item) then 
         totalCount = totalCount + item.count
@@ -3536,7 +3538,7 @@ if not twf.actionpath.action.InventoryCheckAction then
   function InventoryCheckAction:serializableObject(actionPath)
     local resultTable = {}
     
-    resultTable.items = self.items
+    resultTable.item = self.item
     resultTable.slots = self.slots
     resultTable.countCheck = self.countCheck
     resultTable.strict = self.strict
@@ -3558,12 +3560,12 @@ if not twf.actionpath.action.InventoryCheckAction then
   -- @return serialized action
   -----------------------------------------------------------------------------
   function InventoryCheckAction.unserializeObject(serTable, actionPath)
-    local items = serTable.items
+    local item = serTable.item
     local slots = serTable.slots
     local countCheck = serTable.countCheck
     local strict = serTable.strict
     
-    return InventoryCheckAction:new({items = items, slots = slots, countCheck = countCheck, strict = strict})
+    return InventoryCheckAction:new({item = item, slots = slots, countCheck = countCheck, strict = strict})
   end
   
   -----------------------------------------------------------------------------
@@ -3936,8 +3938,8 @@ if not twf.actionpath.action.DropAction then
   -- @return twf.actionpath.ActionResult
   -----------------------------------------------------------------------------
   function DropAction:dropBySlot(stateTurtle, pathState)
-    for i = 1, #slots do 
-      stateTurtle:selectSlot(slots[i])
+    for i = 1, #self.slots do 
+      stateTurtle:selectSlot(self.slots[i])
       
       local res, item = self:drop(stateTurtle, pathState)
       if res == twf.actionpath.ActionResult.FAILURE then 
@@ -4058,7 +4060,7 @@ if not twf.actionpath.action.DropAction then
   -----------------------------------------------------------------------------
   function DropAction:dropByExceptItemType(stateTurtle, pathState)
     for i = 1, 16 do 
-      local item = stateTurtle.getItemDetailAt(i)
+      local item = stateTurtle.inventory:getItemDetailAt(i)
       
       if item then 
         local skip = false
@@ -4076,7 +4078,7 @@ if not twf.actionpath.action.DropAction then
         
         if not skip then 
           stateTurtle:selectSlot(i)
-          local res, item = self:drop()
+          local res, item = self:drop(stateTurtle, pathState)
           
           if res == twf.actionpath.ActionResult.FAILURE then 
             return res 
@@ -4112,7 +4114,7 @@ if not twf.actionpath.action.DropAction then
     
     while nextIndex > 0 do 
       stateTurtle:selectSlot(nextIndex)
-      local res, item = self:drop()
+      local res, item = self:drop(stateTurtle, pathState)
       
       if res == twf.actionpath.ActionResult.FAILURE then 
         return res
@@ -4121,7 +4123,7 @@ if not twf.actionpath.action.DropAction then
       nextIndex = stateTurtle.inventory:firstIndexOfFilledSlot()
     end
     
-    return twf.actionpath.ActionResult.FAILURE
+    return twf.actionpath.ActionResult.SUCCESS
   end
   
   -----------------------------------------------------------------------------
@@ -4240,7 +4242,7 @@ if not twf.actionpath.action.DropAction then
       dropBy = dropBy,
       direction = direction,
       slots = slots,
-      items=  items,
+      items = items,
       itemStrict = itemStrict
     })
   end

@@ -411,11 +411,11 @@ if not twf.inventory.Inventory then
   function Inventory:setItemDetailAt(index, itemDetail)
     self:checkIndex(index)
     
-    if itemDetail.count < 1 then 
+    if itemDetail == nil or itemDetail.count < 1 then 
       self.itemDetails[index] = nil
     end
     
-    self.itemDetails[inex] = itemDetail
+    self.itemDetails[index] = itemDetail
   end
   
   -----------------------------------------------------------------------------
@@ -887,26 +887,28 @@ if not twf.inventory.Inventory then
   
   -----------------------------------------------------------------------------
   -- Compares this inventory with the turtles inventory and updates this 
-  -- inventory. This function assumes that a single item or stack of items was
-  -- acquired, and follows the typical path for item acquisition. Not 
-  -- guarranteed to work in any other scenario.
+  -- inventory. This assumes that no items were lost.
   --
   -- Usage:
   --   local inv = twf.inventory.Inventory:new()
   --   inv:loadFromTurtle()
   --   turtle.select(1)
   --   turtle.suck()
-  --   local newItem = inv:recentlyAcquiredItem(1)
-  --   if newItem then 
-  --     print('sucked ' .. newItem:toString())
+  --   local newItems = inv:recentlyAcquiredItem(1)
+  --   if #newItems > 0 then 
+  --     print('sucked: ')
+  --     for _, item in ipairs(newItems) do 
+  --        print(item:toString())
+  --     end
   --   else
   --     print('nothing to suck')
   --   end
   -- 
   -- @param selectedSlot what slot the turtle had selected when it acquired the
   --                     new item / item stack
-  -- @return             twf.inventory.ItemDetail if 1 item / item stack was 
-  --                     just acquired, nil otherwise
+  -- @return             { twf.inventory.ItemDetail } if 1 item / item stack was 
+  --                     just acquired, an additional itemdetail for every other
+  --                     item acquired. if no items are acquired, an empty list
   -- @error              If the turtle definitely did not just acquire either 
   --                     one item stack or no items.
   -----------------------------------------------------------------------------
@@ -919,73 +921,44 @@ if not twf.inventory.Inventory then
     
     local index = selectedSlot 
     local first = true
+    local result = {}
     
-    while first or index ~= selectedSlot do
-      if first then first = false end
+    while first or index ~= selectedSlot do 
+      local cachedItem = self.itemDetails[selectedSlot]
+      local turtleItem = twf.inventory.ItemDetail:safeNew(turtle.getItemDetail(selectedSlot))
       
-      local turtleItem = twf.inventory.ItemDetail:safeNew(turtle.getItemDetail(index))
-      local cachedItem = self.itemDetails[index]
+      self.itemDetails[selectedSlot] = turtleItem:clone()
+      
       if turtleItem then 
-        self.itemDetails[index] = turtleItem:clone()
+        local oldCount = 0
+        if cachedItem then 
+          oldCount = cachedItem.count
+        end
+        
+        if oldCount > turtleItem.count then error('Impossible state - lost items in recentlyAcquiredItems!') end
+        
+        if oldCount < turtleItem.count then
+          local found = false
+          for i = 1, #result do 
+            if result[i]:lenientItemEquals(turtleItem) then 
+              result[i].count = result[i].count + (turtleItem.count - oldCount)
+              found = true
+              break
+            end
+          end
+          
+          if not found then 
+            result[#result + 1] = turtleItem:clone()
+            result[#result + 1].count = turtleItem.count - oldCount
+          end
+        end
       else
-        self.itemDetails[index] = nil
+        -- The turtle will not attempt to fill stacks over empty slots
+        return result
       end
-      
-      if cachedItem then 
-        if not turtleItem then 
-          error('Impossible state, we LOST items in recentAcquiredItem!')
-        end
-        if turtleItem.count ~= cachedItem.count then
-          if turtleItem.count < cachedItem.count then 
-            error('Impossible state, we LOST items in recentlyAcquiredItem!')
-          end
-          
-          local result = turtleItem:clone()
-          result.count = turtleItem.count - cachedItem.count
-          
-          -- Have to check the next index - it may have overflowed. This loop will almost 
-          -- always break early and be much faster than a full inventory check - but is 
-          -- worse if theres a lot of partial stacks do to all the cloning
-          local newInd = nextIndex(index)
-          while newInd ~= index do 
-            local nextTurtleItem = twf.inventory.ItemDetail:safeNew(turtle.getItemDetail(newInd))
-            local nextCachedItem = self.itemDetails[newInd]
-            if nextTurtleItem then 
-              self.itemDetails[newInd] = nextTurtleItem:clone()
-            else
-              self.itemDetails[newInd] = nil
-            end
-            
-            if nextCachedItem then 
-              if not nextTurtleItem then 
-                error('Impossible state, we LOST items in recentAcquiredItem!')
-              end
-              if nextCachedItem.count ~= nextTurtleItem.count then
-                if nextTurtleItem.count < nextCachedItem.count then
-                  error('Impossible state, we LOST items in recentlyAcquiredItem!')
-                end
-                -- Dont check name/damage, some items stack really strangely
-                result.count = result.count + nextTurtleItem.count - nextCachedItem.count
-              end
-              -- can't be sure we're done when we reach a non-empty slot since we could have
-              -- more items left.
-            elseif nextTurtleItem then
-              result.count = result.count + nextTurtleItem.count
-              break -- If there was no item, then theres no way one stack will not be able to fit
-            end
-            
-            newInd = nextIndex(newInd)
-          end
-          return result
-        end
-      elseif turtleItem then 
-        return turtleItem
-      end
-      
-      index = nextIndex(index)
     end
     
-    return nil
+    return result
   end
   
   -----------------------------------------------------------------------------
@@ -1086,6 +1059,28 @@ if not twf.inventory.Inventory then
     end
     
     return true
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a copy of this inventory
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local inv = twf.inventory.Inventory:new()
+  --   local copy = inv:clone()
+  --
+  -- @return a copy of this instance
+  -----------------------------------------------------------------------------
+  function Inventory:clone()
+    local itemDetails = {}
+    
+    for i = 1, 16 do 
+      if self.itemDetails[i] then 
+        itemDetails[i] = self.itemDetails[i]:clone()
+      end
+    end
+    
+    return Inventory:new({itemDetails = itemDetails})
   end
   
   -----------------------------------------------------------------------------
@@ -1608,7 +1603,8 @@ if not twf.inventory.action then
     --   local result, item = digForward:perform(stateTurtle)
     --
     -- @param stateTurtle StatefulTurtle
-    -- @return tuple of DigResult and ItemDetail for the result and mined items
+    -- @return tuple of DigResult and table of item details for the result and.
+    --         mined items
     -----------------------------------------------------------------------------
     function DigAction:perform(stateTurtle)
       -- Digging related functions never truly fail and don't consume fuel, so 
@@ -1623,9 +1619,9 @@ if not twf.inventory.action then
       if not succ then 
         return twf.inventory.DigResult.DIG_FAILED
       else
-        local item = stateTurtle.inventory:recentlyAcquiredItem(stateTurtle.selectedSlot)
-        if item then 
-          return twf.inventory.DigResult.DIG_SUCCESS, item 
+        local items = stateTurtle.inventory:recentlyAcquiredItem(stateTurtle.selectedSlot)
+        if #items > 0 then 
+          return twf.inventory.DigResult.DIG_SUCCESS, items
         else 
           return twf.inventory.DigResult.NO_ITEM, nil
         end
@@ -2214,16 +2210,17 @@ if not twf.inventory.action then
     --   local result, item = act:perform(stateTurtle)
     --
     -- @param stateTurtle StatefulTurtle
-    -- @return tuple of SuckResult and ItemDetail for the result and sucked item
+    -- @return tuple of SuckResult and table of ItemDetails for the result and
+    --         sucked item
     -----------------------------------------------------------------------------
     function SuckAction:perform(stateTurtle)
       local succ = self:suck()
       
       if succ then 
-        local item = stateTurtle.inventory:recentlyAcquiredItem(stateTurtle.selectedSlot)
+        local items = stateTurtle.inventory:recentlyAcquiredItem(stateTurtle.selectedSlot)
         
-        if item then 
-          return twf.inventory.SuckResult.SUCCESS, item
+        if #items > 0 then 
+          return twf.inventory.SuckResult.SUCCESS, items
         else
           return twf.inventory.SuckResult.FAILURE, nil
         end

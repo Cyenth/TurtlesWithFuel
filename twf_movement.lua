@@ -2447,10 +2447,10 @@ if not twf.movement.StatefulTurtle then
   --   -- prints true
   --   print(st:equals(unserialized))
   --
-  -- @param serObj the serialized object 
-  -- @return the object that was serialized
+  -- @param serTable the serialized object 
+  -- @return the object that was serialized 
   -----------------------------------------------------------------------------
-  function StatefulTurtle.unserializeObject(serObj)
+  function StatefulTurtle.unserializeObject(serTable)
     local actionRecoveryFile = serTable.actionRecoveryFile
     local saveFile = serTable.saveFile
     local orientation = twf.movement.direction.unserializeObject(serTable.orientation)
