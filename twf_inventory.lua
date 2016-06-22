@@ -154,6 +154,50 @@ if not twf.inventory.ItemDetail then
   end
   
   -----------------------------------------------------------------------------
+  -- Serializes this item detail into an object serializable with textutils
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local birchLog = ItemDetail:new({name = 'minecraft:log', damage = 2, count = 1})
+  --   local serialized = birchLog:serializableObject()
+  --   local unserialized = ItemDetail.unserializeObject(serialized)
+  --
+  -- @return object serialization of this item detail
+  -----------------------------------------------------------------------------
+  function ItemDetail:serializableObject()
+    local resultTable = {}
+    
+    resultTable.name = self.name
+    resultTable.damage = self.damage
+    resultTable.count = self.count
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes this item detail that was serialized with serializableObject
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local birchLog = ItemDetail:new({name = 'minecraft:log', damage = 2, count = 1})
+  --   local serialized = birchLog:serializableObject()
+  --   local unserialized = ItemDetail.unserializeObject(serialized)
+  --
+  -- @param serialized the object serialization from serialize
+  -- @return           the item detail that was serialized
+  -----------------------------------------------------------------------------
+  function ItemDetail.unserializeObject(serObj)
+    local name = serObj.name
+    local damage = serObj.damage
+    local count = serObj.count
+    
+    return ItemDetail:new({name = name, damage = damage, count = count})
+  end
+  
+  
+  -----------------------------------------------------------------------------
   -- Serializes this item detail into a string
   --
   -- Usage:
@@ -166,13 +210,7 @@ if not twf.inventory.ItemDetail then
   -- @return string serialization of this item detail
   -----------------------------------------------------------------------------
   function ItemDetail:serialize()
-    local resultTable = {}
-    
-    resultTable.name = self.name
-    resultTable.damage = self.damage
-    resultTable.count = self.count
-    
-    return textutils.serialize(resultTable)
+    return textutils.serialize(self:serializableObject())
   end
   
   -----------------------------------------------------------------------------
@@ -191,11 +229,7 @@ if not twf.inventory.ItemDetail then
   function ItemDetail.unserialize(serialized)
     local serTable = textutils.unserialize(serialized)
     
-    local name = serTable.name
-    local damage = serTable.damage
-    local count = serTable.count
-    
-    return ItemDetail:new({name = name, damage = damage, count = count})
+    return ItemDetail.unserializeObject(serTable)
   end
   
   -----------------------------------------------------------------------------
@@ -605,6 +639,62 @@ if not twf.inventory.Inventory then
   -- Serialization
   
   -----------------------------------------------------------------------------
+  -- Returns an object serialization of this inventory, that can be unserialized
+  -- with unserializeObject
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local Inventory = twf.inventory.Inventory
+  --   local inv = Inventory:new()
+  --   local serialized = inv:serializableObject()
+  --   local unserialized = Inventory.unserializeObject(inv)
+  --   -- prints true
+  --   print(inv:equals(unserialized))
+  --
+  -- @return object serialization of this inventory
+  -----------------------------------------------------------------------------
+  function Inventory:serializableObject()
+    local resultTable = {}
+    
+    resultTable.itemDetails = {}
+    
+    for i = 1, 16 do
+      if self.itemDetails[i] then 
+        resultTable.itemDetails[i] = self.itemDetails[i]:serializableObject()
+      end
+    end
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns the inventory represented by the serialized string
+  --
+  -- Usage:
+  --   dofile('twf_inventory.lua')
+  --   local ItemDetail = twf.inventory.ItemDetail
+  --   local Inventory = twf.inventory.Inventory
+  --   local inv = Inventory:new()
+  --   local serialized = inv:serialize()
+  --   local unserialized = Inventory.unserialize(inv)
+  --   -- prints true
+  --   print(inv:equals(unserialized))
+  --
+  -- @param serialized the string returned from serialize()
+  -- @return           inventory that the string represented
+  -----------------------------------------------------------------------------
+  function Inventory.unserializeObject(serTable)
+    local itemDetails = {}
+    for i = 1, 16 do 
+      if serTable.itemDetails[i] then 
+        itemDetails[i] = twf.inventory.ItemDetail.unserializeObject(serTable.itemDetails[i])
+      end
+    end
+    
+    return Inventory:new({itemDetails = itemDetails})
+  end
+  -----------------------------------------------------------------------------
   -- Returns a string serialization of this inventory, that can be unserialized
   -- with unserialize
   --
@@ -621,17 +711,7 @@ if not twf.inventory.Inventory then
   -- @return string serialization of this inventory
   -----------------------------------------------------------------------------
   function Inventory:serialize()
-    local resultTable = {}
-    
-    resultTable.itemDetails = {}
-    
-    for i = 1, 16 do
-      if self.itemDetails[i] then 
-        resultTable.itemDetails[i] = self.itemDetails[i]:serialize()
-      end
-    end
-    
-    return textutils.serialize(resultTable)
+    return textutils.serialize(self:serializableObject())
   end
   
   -----------------------------------------------------------------------------
@@ -653,14 +733,7 @@ if not twf.inventory.Inventory then
   function Inventory.unserialize(serialized)
     local serTable = textutils.unserialize(serialized)
     
-    local itemDetails = {}
-    for i = 1, 16 do 
-      if serTable.itemDetails[i] then 
-        itemDetails[i] = twf.inventory.ItemDetail.unserialize(serTable.itemDetails[i])
-      end
-    end
-    
-    return Inventory:new({itemDetails = itemDetails})
+    return Inventory.unserializeObject(serTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1576,6 +1649,43 @@ if not twf.inventory.action then
       return 'twf.inventory.action.DigAction'
     end
     
+    -----------------------------------------------------------------------------
+    -- Serializes this action into an object that can be serialized with
+    -- textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.DigAction.unserializeObject(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function DigAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.DigAction.unserializeObject(serialized)
+    -- 
+    -- @param serTable object serialization of this action
+    -- @return         action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function DigAction.unserializeObject(serTable)
+      local direction = twf.movement.direction.unserializeObject(serTable.direction)
+      
+      return DigAction:new({direction = direction})
+    end
     
     -----------------------------------------------------------------------------
     -- Serializes this action
@@ -1589,11 +1699,7 @@ if not twf.inventory.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function DigAction:serialize()
-      local resultTable = {}
-      
-      resultTable.direction = twf.movement.direction.serialize(self.direction)
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -1611,9 +1717,7 @@ if not twf.inventory.action then
     function DigAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = twf.movement.direction.unserialize(serTable.direction)
-      
-      return DigAction:new({direction = direction})
+      return DigAction.unserializeObject(serTable)
     end
     
     action.DigAction = DigAction
@@ -1746,6 +1850,44 @@ if not twf.inventory.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Serializes this action into an object that can be serialized with
+    -- textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.PlaceAction.unserializeObject(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function PlaceAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.PlaceAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.PlaceAction.unserializeObject(serialized)
+    -- 
+    -- @param serTable object serialization of this action
+    -- @return         action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function PlaceAction.unserializeObject(serTable)
+      local direction = twf.movement.direction.unserializeObject(serTable.direction)
+      
+      return PlaceAction:new({direction = direction})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: 
@@ -1757,11 +1899,7 @@ if not twf.inventory.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function PlaceAction:serialize()
-      local resultTable = {}
-      
-      resultTable = twf.movement.direction.serialize(self.direction)
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -1779,9 +1917,7 @@ if not twf.inventory.action then
     function PlaceAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = twf.movement.direction.unserialize(serTable.direction)
-      
-      return PlaceAction:new({direction = direction})
+      return PlaceAction.unserializeObject(serTable)
     end
     
     action.PlaceAction = PlaceAction
@@ -1916,6 +2052,46 @@ if not twf.inventory.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Serializes this action into an object that can be serialized with
+    -- textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.DropAction.unserializeObject(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function DropAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+      resultTable.amount = self.amount
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.DropAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.DropAction.unserializeObject(serialized)
+    -- 
+    -- @param serTable object serialization of this action
+    -- @return         action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function DropAction.unserializeObject(serTable)
+      local direction = twf.movement.direction.unserializeObject(serTable.direction)
+      local amount = serTable.amount
+      
+      return DropAction:new({direction = direction, amount = amount})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: 
@@ -1927,12 +2103,7 @@ if not twf.inventory.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function DropAction:serialize()
-      local resultTable = {}
-      
-      resultTable.direction = twf.movement.direction.serialize(self.direction)
-      resultTable.amount = amount
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -1950,10 +2121,7 @@ if not twf.inventory.action then
     function DropAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = twf.movement.direction.unserialize(serTable.direction)
-      local amount = serTable.amount
-      
-      return DropAction:new({direction = direction, amount = amount})
+      return DropAction.unserializeObject(serTable)
     end
     
     action.DropAction = DropAction
@@ -2083,6 +2251,46 @@ if not twf.inventory.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Serializes this action into an object that can be serialized with
+    -- textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.SuckAction.unserializeObject(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function SuckAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+      resultTable.amount = self.amount
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SuckAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.SuckAction.unserializeObject(serialized)
+    -- 
+    -- @param serTable object serialization of this action
+    -- @return         action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function SuckAction.unserializeObject(serTable)
+      local direction = twf.movement.direction.unserializeObject(serTable.direction)
+      local amount = serTable.amount
+      
+      return SuckAction:new({direction = direction, amount = amount})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: 
@@ -2094,12 +2302,7 @@ if not twf.inventory.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function SuckAction:serialize()
-      local resultTable = {}
-      
-      resultTable.direction = twf.movement.direction.serialize(self.direction)
-      resultTable.amount = self.amount
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -2117,10 +2320,7 @@ if not twf.inventory.action then
     function SuckAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = twf.movement.direction.unserialize(serTable.direction)
-      local amount = serTable.amount
-      
-      return SuckAction:new({direction = direction, amount = amount})
+      return SuckAction.unserializeObject(serTable)
     end
     
     action.SuckAction = SuckAction
@@ -2216,10 +2416,48 @@ if not twf.inventory.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Serializes this action into an object that can be serialized with
+    -- textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SelectSlotAction:new({slotIndex = 3})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.SelectSlotAction.unserializeObject(serialized)
+    -- 
+    -- @return string serialization of this action
+    -----------------------------------------------------------------------------
+    function SelectSlotAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.slotIndex = self.slotIndex
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Unserializes an action serialized by the corresponding serialize function
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SelectSlotAction:new({slotIndex = 3})
+    --   local serialized = act:serializableObject()
+    --   local unserialized = twf.inventory.action.SelectSlotAction.unserializeObject(serialized)
+    -- 
+    -- @param serTable object serialization of this action
+    -- @return         action instance the serialized string represented
+    -----------------------------------------------------------------------------
+    function SelectSlotAction.unserializeObject(serTable)
+      local slotIndex = serTable.slotIndex
+      
+      return SelectSlotAction:new({slotIndex = slotIndex})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
-    -- Usage:
-    --   dofile('twf_inventory.lua')
+    -- Usage: 
+    --   dofile('twf_movement.lua')
     --   local act = twf.inventory.action.SelectSlotAction:new({slotIndex = 3})
     --   local serialized = act:serialize()
     --   local unserialized = twf.inventory.action.SelectSlotAction.unserialize(serialized)
@@ -2227,19 +2465,15 @@ if not twf.inventory.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function SelectSlotAction:serialize()
-      local resultTable = {}
-      
-      resultTable.slotIndex = self.slotIndex
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
     -- Unserializes an action serialized by the corresponding serialize function
     --
-    -- Usage:
-    --   dofile('twf_inventory.lua')
-    --   local act = twf.inventory.action.SelectSlotAction:new({slotIndex = 3})
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.inventory.action.SelectSlotAction:new({direction = twf.movement.direction.FORWARD})
     --   local serialized = act:serialize()
     --   local unserialized = twf.inventory.action.SelectSlotAction.unserialize(serialized)
     -- 
@@ -2249,14 +2483,9 @@ if not twf.inventory.action then
     function SelectSlotAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local slotIndex = serTable.slotIndex
-      
-      return SelectSlotAction:new({slotIndex = slotIndex})
+      return SelectSlotAction.unserializeObject(serTable)
     end
-    
-    action.SelectSlotAction = SelectSlotAction
   end
-  
   twf.inventory.action = action
 end
 
@@ -2776,24 +3005,24 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
-  --   local serialized = st:serialize()
-  --   local unserialized = StatefulTurtle.unserialize(serialized)
+  --   local serialized = st:serializableObject()
+  --   local unserialized = StatefulTurtle.unserializeObject(serialized)
   --   -- prints true
   --   print(st:equals(unserialized))
   --
-  -- @return a string serialization of this instance
+  -- @return an object serialization of this instance
   -----------------------------------------------------------------------------
-  local oldSerialize = StatefulTurtle.serialize
-  function StatefulTurtle:serialize()
-    local base = oldSerialize(self)
+  local oldSerializableObject = StatefulTurtle.serializableObject
+  function StatefulTurtle:serializableObject()
+    local base = oldSerializableObject(self)
     
     local resultTable = {
       base = base, 
-      inventory = self.inventory:serialize(),
+      inventory = self.inventory:serializableObject(),
       selectedSlot = self.selectedSlot
     }
     
-    return textutils.serialize(resultTable)
+    return resultTable
   end
   
   -----------------------------------------------------------------------------
@@ -2803,20 +3032,18 @@ if not twf.movement.StatefulTurtle.INVENTORY_EXTENSIONS then
   --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
-  --   local serialized = st:serialize()
-  --   local unserialized = StatefulTurtle.unserialize(serialized)
+  --   local serialized = st:serializableObject()
+  --   local unserialized = StatefulTurtle.unserializeObject(serialized)
   --   -- prints true
   --   print(st:equals(unserialized))
   --
-  -- @param serialized the serialized string of the turtle
-  -- @return the instance of stateful turtle the string represents
+  -- @param serialized the serialized object 
+  -- @return the instance of stateful turtle the object represents
   -----------------------------------------------------------------------------
-  local oldUnserialize = StatefulTurtle.unserialize
-  function StatefulTurtle.unserialize(serialized)
-    local serTable = textutils.unserialize(serialized)
-    
-    local base = oldUnserialize(serTable.base)
-    local inventory = twf.inventory.Inventory.unserialize(serTable.inventory)
+  local oldUnserializeObject = StatefulTurtle.unserializeObject
+  function StatefulTurtle.unserializeObject(serTable)
+    local base = oldUnserializeObject(serTable.base)
+    local inventory = twf.inventory.Inventory.unserializeObject(serTable.inventory)
     local selectedSlot = serTable.selectedSlot
     
     base.inventory = inventory

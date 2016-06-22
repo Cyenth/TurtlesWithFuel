@@ -342,6 +342,55 @@ if not twf.movement.direction then
   -- Serialization functions
   
   -----------------------------------------------------------------------------
+  -- Converts the specified direction to an object that can be serialized
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local direction = twf.movement.direction
+  --
+  --   local myInfo = {dir = direction.serializableObject(direction.FORWARD) }
+  --   local serialized = textutils.serialize(myInfo)
+  --   local unserialized = textutils.unserialize(myInfo)
+  --   unserialized.dir = direction.unserializeObject(unserialized.dir)
+  --
+  -- @param dir the direction to serialize into a table
+  -- @return something that can be serialized with textutils 
+  -----------------------------------------------------------------------------
+  function direction.serializableObject(dir)
+    if not direction.isDirection(dir) then 
+      error('Expected direction but got ' .. dir)
+    end
+    
+    return dir
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes the specified object that was serialized using 
+  -- serializableObject.
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local direction = twf.movement.direction
+  --
+  --   local myInfo = {dir = direction.serializableObject(direction.FORWARD) }
+  --   local serialized = textutils.serialize(myInfo)
+  --   local unserialized = textutils.unserialize(myInfo)
+  --   unserialized.dir = direction.unserializeObject(unserialized.dir)
+  --
+  -- @param serObj the object returned from the matching serializableObject fn
+  -- @return a direction
+  -----------------------------------------------------------------------------
+  function direction.unserializeObject(serObj)
+    local dir = serObj
+    
+    if not direction.isDirection(dir) then 
+      error('Expected direction but got ' .. dir)
+    end
+    
+    return dir
+  end
+  
+  -----------------------------------------------------------------------------
   -- Serializes the specified direction into a string, that can be unserialized
   -- using unserialize
   -- 
@@ -357,11 +406,9 @@ if not twf.movement.direction then
   -- @param dir the direction to serialize
   -- @return    a string that can be unserialized representing dir
   -- @error     if dir is not a valid direction
+  -----------------------------------------------------------------------------
   function direction.serialize(dir)
-    if not direction.isDirection(dir) then
-      error('Expected direction but got ' .. dir)
-    end
-    return textutils.serialize(dir)
+    return textutils.serialize(direction.serializableObject(dir))
   end
   
   -----------------------------------------------------------------------------
@@ -381,13 +428,9 @@ if not twf.movement.direction then
   -- @error               if the string is not a valid serialization
   -----------------------------------------------------------------------------
   function direction.unserialize(serializedDir)
-    local dir = textutils.unserialize(serializedDir)
+    local serObj = textutils.unserialize(serializedDir)
     
-    if not direction.isDirection(dir) then 
-      error('Expected direction but got ' .. serializedDir)
-    end
-    
-    return dir
+    return direction.unserializeObject(serObj)
   end
   
   -- Miscellaneous functions
@@ -734,52 +777,78 @@ if not twf.movement.position then
   -- Serialization
   
   -----------------------------------------------------------------------------
-  -- Serializes this instance into something unserializable
+  -- Returns an object that can be serialized with textutils
   --
   -- Usage:
   --   dofile('twf_movement.lua')
-  --   local Position = twf.movement.Position
-  --   local p = Position:new({x = 3, y = 2, z = 5})
-  --   local serialized = p:serialize()
-  --   local p2 = Position.unserialize(serialized)
-  --   -- prints true
-  --   print(p:equals(p2))
+  --   local obj = twf.movement.Position:new()
+  --   local data = { pos = obj:serializableObject() }
+  --   local serialized = textutils.serialize(data)
+  --   local unserialized = textutils.unserialize(data)
+  --   unserialized.pos = twf.movement.Position.unserializeObject(unserialized.pos)
   --
-  -- @return a string serialization of this instance
+  -- @return object serializable using textutils
   -----------------------------------------------------------------------------
-  function Position:serialize()
+  function Position:serializableObject()
     local resultTable = {}
     
     resultTable.x = self.x
     resultTable.y = self.y
     resultTable.z = self.z
     
-    return textutils.serialize(resultTable)
+    return resultTable
   end
   
   -----------------------------------------------------------------------------
-  -- Unserializes a serialized position into the position object
+  -- Returns the object that was serialized with serializableObject
   --
   -- Usage:
   --   dofile('twf_movement.lua')
-  --   local Position = twf.movement.Position
-  --   local p = Position:new({x = 3, y = 2, z = 5})
-  --   local serialized = p:serialize()
-  --   local p2 = Position.unserialize(serialized)
-  --   -- prints true
-  --   print(p:equals(p2))
+  --   local obj = twf.movement.Position:new()
+  --   local data = { pos = obj:serializableObject() }
+  --   local serialized = textutils.serialize(data)
+  --   local unserialized = textutils.unserialize(data)
+  --   unserialized.pos = twf.movement.Position.unserializeObject(unserialized.pos)
+  --
+  -- @return object serializable using textutils
+  -----------------------------------------------------------------------------
+  function Position.unserializeObject(serObj)
+    local x = serObj.x
+    local y = serObj.y
+    local z = serObj.z
+    
+    return Position:new({x = x, y = y, z = z})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this instance into something unserializable
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local obj = twf.movement.Position:new()
+  --   local serialized = obj:serialize()
+  --   local unserialized = twf.movement.Position.unserialize(serialized)
+  --
+  -- @return a string serialization of this instance
+  -----------------------------------------------------------------------------
+  function Position:serialize()
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes the serialized object into the original object
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local obj = twf.movement.Position:new()
+  --   local serialized = obj:serialize()
+  --   local unserialized = twf.movement.Position.unserialize(serialized)
   --
   -- @param serialized a string from serialize()
   -- @return           the position the serialized string represents
   -----------------------------------------------------------------------------
   function Position.unserialize(serialized)
-    local serTable = textutils.unserialize(serialized)
-    
-    local x = serTable.x
-    local y = serTable.y
-    local z = serTable.z
-    
-    return Position:new({x = x, y = y, z = z})
+    return Position.unserializeObject(textutils.unserialize(serialized))
   end
   
   -- Miscellaneous
@@ -1086,51 +1155,78 @@ if not twf.movement.Vector then
   -- Serialization
   
   -----------------------------------------------------------------------------
-  -- Serializes the vector, such that it can be unserialized later
+  -- Returns an object that can be serialized with textutils
   --
   -- Usage:
   --   dofile('twf_movement.lua')
-  --   local Vector = twf.movement.Vector
-  --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
-  --   local serialized = v:serialize()
-  --   local unserialized = Vector.unserialize(serialized)
-  --   -- prints true
-  --   print(v:equals(unserialized))
+  --   local obj = twf.movement.Vector:new()
+  --   local data = { pos = obj:serializableObject() }
+  --   local serialized = textutils.serialize(data)
+  --   local unserialized = textutils.unserialize(data)
+  --   unserialized.pos = twf.movement.Vector.unserializeObject(unserialized.pos)
   --
-  -- @return string serialization of this vector
+  -- @return object serializable using textutils
   -----------------------------------------------------------------------------
-  function Vector:serialize()
+  function Vector:serializableObject()
     local resultTable = {}
     
     resultTable.deltaX = self.deltaX
     resultTable.deltaY = self.deltaY
     resultTable.deltaZ = self.deltaZ
     
-    return textutils.serialize(resultTable)
+    return resultTable
   end
   
   -----------------------------------------------------------------------------
-  -- Unserializes this vector from a serialized string
+  -- Returns the object that was serialized with serializableObject
   --
   -- Usage:
   --   dofile('twf_movement.lua')
-  --   local Vector = twf.movement.Vector
-  --   local v = Vector:new({deltaX = 3, deltaY = 2, deltaZ = 5})
-  --   local serialized = v:serialize()
-  --   local unserialized = Vector.unserialize(serialized)
-  --   -- prints true
-  --   print(v:equals(unserialized))
+  --   local obj = twf.movement.Vector:new()
+  --   local data = { pos = obj:serializableObject() }
+  --   local serialized = textutils.serialize(data)
+  --   local unserialized = textutils.unserialize(data)
+  --   unserialized.pos = twf.movement.Vector.unserializeObject(unserialized.pos)
   --
-  -- @param serialized the serialized vector object
-  -- @return vector object the string was representing
-  function Vector.unserialize(serialized)
-    local serTable = textutils.unserialize(serialized)
-    
+  -- @return object serializable using textutils
+  -----------------------------------------------------------------------------
+  function Vector.unserializeObject(serObj)
     local deltaX = serTable.deltaX
     local deltaY = serTable.deltaY
     local deltaZ = serTable.deltaZ
     
     return Vector:new({deltaX = deltaX, deltaY = deltaY, deltaZ = deltaZ})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this instance into something unserializable
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local obj = twf.movement.Vector:new()
+  --   local serialized = obj:serialize()
+  --   local unserialized = twf.movement.Vector.unserialize(serialized)
+  --
+  -- @return a string serialization of this instance
+  -----------------------------------------------------------------------------
+  function Vector:serialize()
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes the serialized object into the original object
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local obj = twf.movement.Vector:new()
+  --   local serialized = obj:serialize()
+  --   local unserialized = twf.movement.Vector.unserialize(serialized)
+  --
+  -- @param serialized a string from serialize()
+  -- @return           the Vector the serialized string represents
+  -----------------------------------------------------------------------------
+  function Vector.unserialize(serialized)
+    return Vector.unserializeObject(textutils.unserialize(serialized))
   end
   
   -- Miscellaneous
@@ -1387,6 +1483,30 @@ if not twf.movement.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Returns an object that can be serialized using textutils
+    --
+    -- Usage: Not used directly
+    --
+    -- @return object that can be serialized
+    -----------------------------------------------------------------------------
+    function Action:serializableObject()
+      error('Action:serializableObject() should not be called!')
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns the action that was serialized into an object from
+    -- serializableObject
+    --
+    -- Usage: Not used directly
+    --
+    -- @param serObj the serialized object
+    -- @return object that was serialized
+    -----------------------------------------------------------------------------
+    function Action.unserializeObject(serObj)
+      error('Action.unserializeObject() should not be called')
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: Not used directly
@@ -1396,7 +1516,6 @@ if not twf.movement.action then
     function Action:serialize()
       error('Action:serialize() should not be called!')
     end
-    
     -----------------------------------------------------------------------------
     -- Unserializes an action serialized by the corresponding serialize function
     --
@@ -1406,7 +1525,7 @@ if not twf.movement.action then
     -- @return           action instance the serialized string represented
     -----------------------------------------------------------------------------
     function Action.unserialize(serialized)
-      error('Action:unserialize() should not be called!')
+      error('Action.unserialize() should not be called!')
     end
     
     action.Action = Action
@@ -1574,6 +1693,48 @@ if not twf.movement.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Returns an object that can be serialized using textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.movement.action.MoveAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serAct = { name = act.name(), action = act:serializableObject() }
+    --   local serialized = textutils.serialize(serAct)
+    --   local unserialized = textutils.unserialize(serialized)
+    --   unserialized.action = twf.movement.action.MoveAction.unserializeObject(unserialized.action)
+    --
+    -- @return object that can be serialized
+    -----------------------------------------------------------------------------
+    function MoveAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializeObject(self.direction)
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns the action that was serialized into an object from
+    -- serializableObject
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.movement.action.MoveAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serAct = { name = act.name(), action = act:serializableObject() }
+    --   local serialized = textutils.serialize(serAct)
+    --   local unserialized = textutils.unserialize(serialized)
+    --   unserialized.action = twf.movement.action.MoveAction.unserializeObject(unserialized.action)
+    --
+    -- @param serObj the serialized object
+    -- @return object that was serialized
+    -----------------------------------------------------------------------------
+    function MoveAction.unserializeObject(serObj)
+      local direction = twf.movement.direction.unserializeObject(serObj.direction)
+      
+      return MoveAction:new({direction = direction})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: 
@@ -1585,11 +1746,7 @@ if not twf.movement.action then
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function MoveAction:serialize()
-      local resultTable = {}
-      
-      resultTable.direction = twf.movement.direction.serialize(self.direction)
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -1607,9 +1764,7 @@ if not twf.movement.action then
     function MoveAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = twf.movement.direction.unserialize(serTable.direction)
-      
-      return MoveAction:new({direction = direction})
+      return MoveAction.unserializeObject(serTable)
     end
     
     action.MoveAction = MoveAction
@@ -1723,22 +1878,60 @@ if not twf.movement.action then
     end
     
     -----------------------------------------------------------------------------
+    -- Returns an object that can be serialized using textutils
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.movement.action.TurnAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serAct = { name = act.name(), action = act:serializableObject() }
+    --   local serialized = textutils.serialize(serAct)
+    --   local unserialized = textutils.unserialize(serialized)
+    --   unserialized.action = twf.movement.action.TurnAction.unserializeObject(unserialized.action)
+    --
+    -- @return object that can be serialized
+    -----------------------------------------------------------------------------
+    function TurnAction:serializableObject()
+      local resultTable = {}
+      
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+      
+      return resultTable
+    end
+    
+    -----------------------------------------------------------------------------
+    -- Returns the action that was serialized into an object from
+    -- serializableObject
+    --
+    -- Usage: 
+    --   dofile('twf_movement.lua')
+    --   local act = twf.movement.action.TurnAction:new({direction = twf.movement.direction.FORWARD})
+    --   local serAct = { name = act.name(), action = act:serializableObject() }
+    --   local serialized = textutils.serialize(serAct)
+    --   local unserialized = textutils.unserialize(serialized)
+    --   unserialized.action = twf.movement.action.TurnAction.unserializeObject(unserialized.action)
+    --
+    -- @param serObj the serialized object
+    -- @return object that was serialized
+    -----------------------------------------------------------------------------
+    function TurnAction.unserializeObject(serObj)
+      local direction = twf.movement.direction.unserializeObject(serObj.direction)
+      
+      return TurnAction:new({direction = direction})
+    end
+    
+    -----------------------------------------------------------------------------
     -- Serializes this action
     --
     -- Usage: 
     --   dofile('twf_movement.lua')
-    --   local act = twf.movement.action.TurnAction:new({direction = twf.movement.direction.CLOCKWISE})
+    --   local act = twf.movement.action.TurnAction:new({direction = twf.movement.direction.FORWARD})
     --   local serialized = act:serialize()
     --   local unserialized = twf.movement.action.TurnAction.unserialize(serialized)
     -- 
     -- @return string serialization of this action
     -----------------------------------------------------------------------------
     function TurnAction:serialize()
-      local resultTable = {}
-      
-      resultTable.direction = self.direction
-      
-      return textutils.serialize(resultTable)
+      return textutils.serialize(self:serializableObject())
     end
     
     -----------------------------------------------------------------------------
@@ -1746,7 +1939,7 @@ if not twf.movement.action then
     --
     -- Usage: 
     --   dofile('twf_movement.lua')
-    --   local act = twf.movement.action.TurnAction:new({direction = twf.movement.direction.CLOCKWISE})
+    --   local act = twf.movement.action.TurnAction:new()
     --   local serialized = act:serialize()
     --   local unserialized = twf.movement.action.TurnAction.unserialize(serialized)
     -- 
@@ -1756,9 +1949,7 @@ if not twf.movement.action then
     function TurnAction.unserialize(serialized)
       local serTable = textutils.unserialize(serialized)
       
-      local direction = serTable.direction
-      
-      return TurnAction:new({direction = direction})
+      return TurnAction.unserializeObject(serTable)
     end
     
     action.TurnAction = TurnAction
@@ -2225,6 +2416,64 @@ if not twf.movement.StatefulTurtle then
   --   dofile('twf_movement.lua')
   --   local StatefulTurtle = twf.movement.StatefulTurtle
   --   local st = StatefulTurtle:new()
+  --   local serialized = st:serializableObject()
+  --   local unserialized = StatefulTurtle.unserialize(serialized)
+  --   -- prints true
+  --   print(st:equals(unserialized))
+  --
+  -- @return an object that can be serialized with textutils
+  -----------------------------------------------------------------------------
+  function StatefulTurtle:serializableObject()
+    local resultTable = {}
+    
+    resultTable.actionRecoveryFile = self.actionRecoveryFile
+    resultTable.saveFile = self.saveFile
+    resultTable.orientation = twf.movement.direction.serializableObject(self.orientation)
+    resultTable.position = self.position:serializableObject()
+    resultTable.fuelLevel = self.fuelLevel
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes the instance that was serialized with serializableObject
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local StatefulTurtle = twf.movement.StatefulTurtle
+  --   local st = StatefulTurtle:new()
+  --   local serialized = st:serializableObject()
+  --   local unserialized = StatefulTurtle.unserialize(serialized)
+  --   -- prints true
+  --   print(st:equals(unserialized))
+  --
+  -- @param serObj the serialized object 
+  -- @return the object that was serialized
+  -----------------------------------------------------------------------------
+  function StatefulTurtle.unserializeObject(serObj)
+    local actionRecoveryFile = serTable.actionRecoveryFile
+    local saveFile = serTable.saveFile
+    local orientation = twf.movement.direction.unserializeObject(serTable.orientation)
+    local position = twf.movement.Position.unserializeObject(serTable.position)
+    local fuelLevel = serTable.fuelLevel
+    
+    return StatefulTurtle:new({
+      actionRecoveryFile = actionRecoveryFile,
+      saveFile = saveFile,
+      orientation = orientation,
+      position = position,
+      fuelLevel = fuelLevel
+    })
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this instance of StatefulTurtle such that it can be 
+  -- unserialized later.
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local StatefulTurtle = twf.movement.StatefulTurtle
+  --   local st = StatefulTurtle:new()
   --   local serialized = st:serialize()
   --   local unserialized = StatefulTurtle.unserialize(serialized)
   --   -- prints true
@@ -2233,15 +2482,7 @@ if not twf.movement.StatefulTurtle then
   -- @return a string serialization of this instance
   -----------------------------------------------------------------------------
   function StatefulTurtle:serialize()
-    local resultTable = {}
-    
-    resultTable.actionRecoveryFile = self.actionRecoveryFile
-    resultTable.saveFile = self.saveFile
-    resultTable.orientation = twf.movement.direction.serialize(self.orientation)
-    resultTable.position = self.position:serialize()
-    resultTable.fuelLevel = self.fuelLevel
-    
-    return textutils.serialize(resultTable)
+    return textutils.serialize(self:serializableObject())
   end
   
   -----------------------------------------------------------------------------
@@ -2262,19 +2503,7 @@ if not twf.movement.StatefulTurtle then
   function StatefulTurtle.unserialize(serialized)
     local serTable = textutils.unserialize(serialized)
     
-    local actionRecoveryFile = serTable.actionRecoveryFile
-    local saveFile = serTable.saveFile
-    local orientation = twf.movement.direction.unserialize(serTable.orientation)
-    local position = twf.movement.Position.unserialize(serTable.position)
-    local fuelLevel = serTable.fuelLevel
-    
-    return StatefulTurtle:new({
-      actionRecoveryFile = actionRecoveryFile,
-      saveFile = saveFile,
-      orientation = orientation,
-      position = position,
-      fuelLevel = fuelLevel
-    })
+    return StatefulTurtle.unserializeObject(serTable)
   end
   
   -----------------------------------------------------------------------------
