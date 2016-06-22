@@ -67,18 +67,7 @@ if not twf.actionpath.action.Action then
   end
   
   -----------------------------------------------------------------------------
-  -- Called when this action completes successfully. Should update the state
-  -- of the turtle. Non-leaf actions should do nothing here.
-  -- 
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Action:new()
-  --   local st = twf.movement.StateTurtle.loadOrInit('my_program')
-  --   local pathState = {}
-  --   local result = act:perform(st, pathState)
-  --   if someSuccessCheck(result) then 
-  --     act:update(st, pathState)
-  --   end
+  -- Unused
   -- 
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
@@ -124,17 +113,17 @@ if not twf.actionpath.action.Action then
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.Action:new()
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Action.unserialize(serialized)
-  --   -- Depends on the action what this prints
-  --   print(unserialized:serialize())
+  --   local unserialized = twf.actionpath.action.Action.unserialize(serialized, actPath)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Action.unserialize(serialized)
+  function Action.unserialize(serialized, actionPath)
     error('Action:unserialize(serialized) should not be called directly!')
   end
   
-  twf.actionpatch.action.Action = Action
+  twf.actionpath.action.Action = Action
 end
 
 -----------------------------------------------------------------------------
@@ -189,7 +178,19 @@ if not twf.actionpath.ActionPath then
   -- @param o (optional) superseding object
   -- @return a new instance of action path
   function ActionPath:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if not o.registeredActions then 
+      o.registeredActions = {}
+    end
+    
+    if not o.pathState then 
+      o.pathState = {}
+    end
+     
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -219,7 +220,19 @@ if not twf.actionpath.ActionPath then
   --            combination of those
   -----------------------------------------------------------------------------
   function ActionPath:registerActions(...)
-    error('Not yet implemented')
+    for i = 1, #arg, 1 do 
+      if type(arg[i]) == 'table' then 
+        if type(arg[i].name) == 'function' then 
+          self.registeredActions[#self.registeredActions + 1] = arg[i]
+        else
+          for key, value in pairs(arg[i]) do
+            self:registerActions(value)
+          end
+        end
+      else
+        error('Unexpected thing: ' .. arg[i])
+      end
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -235,7 +248,11 @@ if not twf.actionpath.ActionPath then
   -- @param fileName the file to load from 
   -----------------------------------------------------------------------------
   function ActionPath:loadFromFile(fileName)
-    error('Not yet implemented')
+    local file = fs.open(fileName, 'r')
+    local serialized = file.readAll()
+    file.close()
+    
+    self:unserialize(serialized)
   end
   
   -----------------------------------------------------------------------------
@@ -250,13 +267,13 @@ if not twf.actionpath.ActionPath then
   -- @param fileName the filename to save to 
   -----------------------------------------------------------------------------
   function ActionPath:saveToFile(fileName)
-    error('Not yet implemented')
+    local file = fs.open(fileName, 'w')
+    file.write(self:serialize())
+    file.close()
   end
   
   -----------------------------------------------------------------------------
-  -- 'Ticks' this action path by calling the head actions perform. Assuming the
-  -- head action return ActionResult.SUCCESS then its updateState is called.
-  -- Otherwise, an error is thrown. 
+  -- 'Ticks' this action path by calling the head actions perform. 
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
@@ -265,8 +282,12 @@ if not twf.actionpath.ActionPath then
   --   actPath:loadFromFile('my_prog.actionpath')
   --   actPath:tick()
   -----------------------------------------------------------------------------
-  function ActionPath:tick()
-    error('Not yet implemented')
+  function ActionPath:tick(stateTurtle)
+    local result = self.head:perform(stateTurtle, self)
+    
+    if result == twf.actionpath.ActionResult.SUCCESS then 
+      self.head:updateState(stateTurtle, self)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -283,6 +304,14 @@ if not twf.actionpath.ActionPath then
   -- @return string serialization of the action
   -----------------------------------------------------------------------------
   function ActionPath:serializeAction(action)
+    if not action then 
+      error('Expected action, but got ' .. type(action))
+    end
+    
+    if type(action.name) ~= 'function' then 
+      error('Expected action, but got ' .. action .. ' (type(action.name) = ' .. type(action.name) .. ')')
+    end
+    
     local resultTable = {}
     
     resultTable.name = action.name()
@@ -306,7 +335,17 @@ if not twf.actionpath.ActionPath then
   -- @param serializedAction the serialized action
   -- @return                 action that was serialized
   function ActionPath:unserializeAction(serializedAction)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serializedAction)
+    
+    local name = serTable.name
+    local serAction = serTable.action
+    
+    for i = 1, #self.registeredActions do 
+      local act = self.registeredActions[i]
+      if act.name() == name then 
+        return act.unserialize(serAction, self)
+      end
+    end
   end
   -----------------------------------------------------------------------------
   -- Serializes this actionpaths head action and pathstate such that it can be 
@@ -322,7 +361,12 @@ if not twf.actionpath.ActionPath then
   -- @return string serialization of this actionpath
  -----------------------------------------------------------------------------
   function ActionPath:serialize()
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.head = self:serializeAction(self.head)
+    resultTable.pathState = pathState
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -342,10 +386,12 @@ if not twf.actionpath.ActionPath then
   --   actPath2:unserialize(serialized)
   --
   -- @param serialized string serialization of an actionpath
-  -- @return           action path that was serialized
   -----------------------------------------------------------------------------
   function ActionPath:unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    self.head = self:unserializeAction(serTable.head)
+    self.pathState = serTable.pathState
   end
   
   twf.actionpath.ActionPath = ActionPath
@@ -365,7 +411,7 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   -- Remarks:
   --  First loads the actionpath from file. Due to the strict serialization 
   --  this will run the turtle in the appropriate state - the next child to
-  --  be called will 
+  --  be called will be correct.
   --
   -- Usage:
   --   -- Generally in startup file
@@ -373,24 +419,52 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   --   local ActionPath = twf.actionpath.ActionPath
   --   local myProg = ActionPath:new()
   --   myProg:registerActions(twf.actionpath.action)
-  --   -- Register custom actions here
-  --   myProg:loadFromFile('my_program.actionpath')
+  --   -- register custom actions here
   --   
   --   local st = twf.movement.StatefulTurtle:new()
-  --   st:executeActionPath(myProg, 'state', 'actpath_state')
+  --   st:executeActionPath(myProg, 'my_program' 'state', 'actpath_state')
   --
   -- Remarks:
-  --   This function may never return 
+  --   This function will normally never return 
   --
-  -- @param actionPath         the action path to execute
+  -- @param actionPath         the action path prepared with the necessary 
+  --                           actions for loading.
+  -- @param actionPathFilePref actionPathFile where the action file is saved 
+  --                           normally. Postfixed with .actionpath
   -- @param statePrefix        prefix for the turtle state. 
   --                           Postfixed with .dat and _action_recovery.dat
   -- @param actPathStatePrefix prefix for the action path state.
   --                           Postfixed with _recovery.dat
   -- @see                      twf.actionpath.ActionPath
   -----------------------------------------------------------------------------
-  function StatefulTurtle:executeActionPath(actionPath, statePrefix, actPathStatePrefix)
-    error('Not yet implemented')
+  function StatefulTurtle:executeActionPath(actionPath, actionPathFilePref, statePrefix, actPathStatePrefix)
+    self.saveFile = statePrefix .. '.dat'
+    self.actionRecoveryFile = actPathStatePrefix .. '_action_recovery.dat'
+    
+    local actionPathFile = actionPathFilePref .. '.actionpath'
+    local actionPathRecoveryFile = actPathStatePrefix .. '_recovery.dat'
+    
+    if fs.exists(actionPathRecoveryFile) then 
+      actionPath:loadFromFile(actionPathRecoveryFile)
+    elseif fs.exists(actionPathFile) then 
+      actionPath:loadFromFile(actionPathFile)
+    else
+      error('Action path not found at ' .. actionPathFile .. ' or ' .. actionPathRecoveryFile)
+    end
+    
+    -- It's up to the actions to figure out how to handle the action recovery file
+    -- Good luck to 'em!
+    
+    while true do 
+      actionPath:tick(self)
+      actionPath:saveToFile(actionPathRecoveryFile)
+      self:finishAction() -- See twf.actionpath.action.MoveAction before you touch this
+      
+      -- Yielding here will make it slightly more likely to be 
+      -- unloaded here, which is pretty much guarranteed to work
+      os.queueEvent("twfFakeEventName")
+      os.pullEvent("twfFakeEventName")
+    end
   end
   
   StatefulTurtle.ACTIONPATH_EXTENSIONS = true
@@ -429,14 +503,17 @@ if not twf.actionpath.ActionResult then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints action: success
+  --   -- prints action succeeded
   --   print(twf.actionpath.ActionResult.toString(twf.actionpath.ActionResult.SUCCESS))
   --
   -- @param actionResult the action result code 
   -- @return             string description of the result code
   -----------------------------------------------------------------------------
   function ActionResult.toString(actionResult)
-    error('Not yet implemented')
+    if     actionResult == ActionResult.SUCCESS then return 'action succeeded'
+    elseif actionResult == ActionResult.RUNNING then return 'action running'
+    elseif actionResult == ActionResult.FAILURE then return 'action failed'
+    else error('Expected ActionResult but got ' .. actionResult) end
   end
   
   twf.actionpath.ActionResult = ActionResult
@@ -478,7 +555,17 @@ if not twf.actionpath.action.SequenceAction then
   -- @error   if o.children is not a table or is empty
   -----------------------------------------------------------------------------
   function SequenceAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.children) ~= 'table' then 
+      error('Expected o.children to be a table of actions but was ' .. type(o.children) .. '!')
+    elseif #o.children == 0 then 
+      error('Expected o.children to be a table of actions but was empty!')
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -499,7 +586,22 @@ if not twf.actionpath.action.SequenceAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SequenceAction:perform(stateTurtle, pathState)
-    error('Not yet implemented')
+    local res = self.children[self.currentIndex]:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then      
+      self.currentIndex = self.currentIndex + 1
+      if self.currentIndex > self.children.count then 
+        self.currentIndex = 1
+        return res
+      end
+      
+      return twf.actionpath.ActionResult.RUNNING
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.currentIndex = 1
+      return res
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -538,7 +640,17 @@ if not twf.actionpath.action.SequenceAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function SequenceAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.children = {}
+    
+    for i = 1, #self.children do 
+      resultTable.children[i] = actionPath:serializeAction(self.children[i])
+    end
+    
+    resultTable.currentIndex = self.currentIndex
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -550,13 +662,25 @@ if not twf.actionpath.action.SequenceAction then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.SequenceAction.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SequenceAction.unserialize(serialized)
-    error('Not yet implemented')
+  function SequenceAction.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local children = {}
+    
+    for i = 1, #serTable.children do 
+      children[i] = actionPath:unserializeAction(serTable.children[i])
+    end
+    
+    local currentIndex = serTable.currentIndex
+    
+    return SequenceAction:new({children = children, currentIndex = currentIndex})
   end
   
-  twf.actionpath.action.SequenceAction
+  twf.actionpath.action.SequenceAction = SequenceAction
 end
 
 -----------------------------------------------------------------------------
@@ -591,7 +715,17 @@ if not twf.actionpath.action.SelectorAction then
   -- @error   if o.children is nil or empty
   -----------------------------------------------------------------------------
   function SelectorAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.children) ~= 'table' then 
+      error('Expected o.children to be a table of actions but was ' .. type(o.children) .. '!')
+    elseif #o.children == 0 then 
+      error('Expected o.children to be a table of actions but was empty!')
+    end
+    
+    return o
   end
   
   
@@ -612,7 +746,23 @@ if not twf.actionpath.action.SelectorAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SelectorAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.children[self.currentIndex]:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.currentIndex = 1
+      return res
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.currentIndex = self.currentIndex + 1 
+      if self.currentIndex > #self.children then 
+        self.currentIndex = 1
+        return res
+      end
+      return twf.actionpath.ActionResult.SUCCESS
+    end
+    
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -651,7 +801,17 @@ if not twf.actionpath.action.SelectorAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function SelectorAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.children = {}
+    
+    for i = 1, #self.children do 
+      resultTable.children[i] = actionPath:serializeAction(self.children[i])
+    end
+    
+    resultTable.currentIndex = self.currentIndex
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -663,10 +823,22 @@ if not twf.actionpath.action.SelectorAction then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.SelectorAction.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SelectorAction.unserialize(serialized)
-    error('Not yet implemented')
+  function SelectorAction.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local children = {}
+    
+    for i = 1, #serTable.children do 
+      children[i] = actionPath:unserializeAction(serTable.children[i])
+    end
+    
+    local currentIndex = serTable.currentIndex
+    
+    return SelectorAction:new({children = children, currentIndex = currentIndex})
   end
   
   twf.actionpath.action.SelectorAction = SelectorAction
@@ -716,7 +888,21 @@ if not twf.actionpath.action.RandomSelectorAction then
   -- @error   if o.children is nil or empty
   -----------------------------------------------------------------------------
   function RandomSelectorAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.children) ~= 'table' then 
+      error('Expected o.children to be a table but got ' .. type(o.children))
+    end
+    if #o.children < 1 then 
+      error('Expected o.children to be a table with things in it, but it is empty!')
+    end
+    
+    o.bannedIndexes = o.bannedIndexes or {}
+    o.currentIndex = o.currentIndex or 1
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -736,7 +922,51 @@ if not twf.actionpath.action.RandomSelectorAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function RandomSelectorAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local choiceIndex = -1
+    if self.currentIndex == nil then 
+      local remainingOptions = {}
+      for i = 1, #self.children do 
+        local banned = false
+        for j = 1, #self.bannedIndexes do 
+          if i == self.bannedIndexes[j] then 
+            banned = true
+            break
+          end
+        end
+        
+        if not banned then 
+          remainingOptions[#remainingOptions + 1] = i
+        end
+      end
+      
+      local optionsIndex = math.random(1, #remainingOptions)
+      choiceIndex = remainingOptions[choiceIndex]
+      self.bannedIndexes[#self.bannedIndexes + 1] = choiceIndex
+    else 
+      choiceIndex = self.currentIndex
+    end
+    
+    local choice = self.children[choiceIndex]
+    local res = choice:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.bannedIndexes = {}
+      self.currentIndex = nil
+      return res
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.currentIndex = choiceIndex
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.currentIndex = nil
+      if #self.bannedIndexes == #self.children then 
+        self.bannedIndexes = {}
+        return twf.actionpath.ActionResult.FAILURE
+      else
+        return twf.actionpath.ActionResult.RUNNING
+      end
+    end
+    
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -775,7 +1005,19 @@ if not twf.actionpath.action.RandomSelectorAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function RandomSelectorAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.children = {}
+    
+    for i = 1, #self.children do 
+      resultTable.children[i] = actionPath:serializeAction(self.children[i])
+    end
+    
+    resultTable.currentIndex = self.currentIndex
+    
+    resultTable.bannedIndexes = self.bannedIndexes 
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -787,10 +1029,24 @@ if not twf.actionpath.action.RandomSelectorAction then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.RandomSelectorAction.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RandomSelectorAction.unserialize(serialized)
-    error('Not yet implemented')
+  function RandomSelectorAction.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local children = {}
+    
+    for i = 1, #serTable.children do 
+      children[i] = actionPath:unserializeAction(serTable.children[i])
+    end
+    
+    local currentIndex = serTable.currentIndex
+    
+    local bannedIndexes = serTable.bannedIndexes
+    
+    return SequenceAction:new({children = children, currentIndex = currentIndex, bannedIndexes = bannedIndexes})
   end
   
   twf.actionpath.action.RandomSelectorAction = RandomSelectorAction
@@ -824,7 +1080,15 @@ if not twf.actionpath.action.Inverter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function Inverter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self 
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is a ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -843,7 +1107,17 @@ if not twf.actionpath.action.Inverter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function Inverter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      return twf.actionpath.ActionResult.FAILURE 
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      return twf.actionpath.ActionResult.SUCCESS
+    end
+    
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -878,10 +1152,15 @@ if not twf.actionpath.action.Inverter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Inverter.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Inverter:serialize()
-    error('Not yet implemented')
+  function Inverter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -893,10 +1172,16 @@ if not twf.actionpath.action.Inverter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Inverter.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Inverter.unserialize(serialized)
-    error('Not yet implemented')
+  function Inverter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return Inverter:new({child = child})
   end
   
   twf.actionpath.action.Inverter = Inverter
@@ -927,7 +1212,15 @@ if not twf.actionpath.action.Succeeder then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function Succeeder:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (as an Action) but it is a ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -946,7 +1239,13 @@ if not twf.actionpath.action.Succeeder then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function Succeeder:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    end
+    
+    return twf.actionpath.ActionResult.SUCCESS
   end
   
   -----------------------------------------------------------------------------
@@ -981,10 +1280,15 @@ if not twf.actionpath.action.Succeeder then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Succeeder.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Succeeder:serialize()
-    error('Not yet implemented')
+  function Succeeder:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -996,10 +1300,16 @@ if not twf.actionpath.action.Succeeder then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Succeeder.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Succeeder.unserialize(serialized)
-    error('Not yet implemented')
+  function Succeeder.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return Succeeder:new({child = child})
   end
   
   twf.actionpath.action.Succeeder = Succeeder
@@ -1030,7 +1340,15 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function RepeatUntilFailure:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (as an Action) but it is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1050,7 +1368,15 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function RepeatUntilFailure:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.SUCCESS then 
+      return twf.actionpath.ActionResult.RUNNING 
+    end
+    
+    return twf.actionpath.ActionResult.FAILURE
   end
   
   -----------------------------------------------------------------------------
@@ -1085,10 +1411,15 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:serialize()
-    error('Not yet implemented')
+  function RepeatUntilFailure:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1100,10 +1431,16 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure.unserialize(serialized)
-    error('Not yet implemented')
+  function RepeatUntilFailure.unserialize(serialized, actionPath)
+    local serTable = textutils.usnerialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return RepeatUntilFailure:new({child = child})
   end
   
   twf.actionpath.action.RepeatUntilFailure = RepeatUntilFailure
@@ -1149,7 +1486,18 @@ if not twf.actionpath.action.Repeater then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function Repeater:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    o.times = o.times or 1
+    o.counter = o.counter or 0
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1170,7 +1518,23 @@ if not twf.actionpath.action.Repeater then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function Repeater:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.counter = self.counter + 1
+      
+      if self.counter == self.times then 
+        self.counter = 0
+        return twf.actionpath.ActionResult.SUCCESS
+      end
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.counter = 0
+      return res
+    end
+    
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -1205,10 +1569,17 @@ if not twf.actionpath.action.Repeater then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Repeater.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Repeater:serialize()
-    error('Not yet implemented')
+  function Repeater:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    resultTable.times = self.times
+    resultTable.counter = self.counter
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1220,10 +1591,18 @@ if not twf.actionpath.action.Repeater then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.Repeater.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Repeater.unserialize(serialized)
-    error('Not yet implemented')
+  function Repeater.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    local times = serTable.times
+    local counter = serTable.counter
+    
+    return Repeater:new({child = child, times = times, counter = counter})
   end
   
   twf.actionpath.action.Repeater = Repeater
@@ -1256,7 +1635,15 @@ if not twf.actionpath.action.DieOnFailure then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function DieOnFailure:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1277,7 +1664,15 @@ if not twf.actionpath.action.DieOnFailure then
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
   function DieOnFailure:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      return res
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    else
+      error('World is coming to an end - my child returned ' .. res)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1312,10 +1707,15 @@ if not twf.actionpath.action.DieOnFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.DieOnFailure.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DieOnFailure:serialize()
-    error('Not yet implemented')
+  function DieOnFailure:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1327,10 +1727,16 @@ if not twf.actionpath.action.DieOnFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.DieOnFailure.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DieOnFailure.unserialize(serialized)
-    error('Not yet implemented')
+  function DieOnFailure.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return DieOnFailure:new({child = child})
   end
   
   twf.actionpath.action.DieOnFailure = DieOnFailure
@@ -1362,12 +1768,20 @@ if not twf.actionpath.action.RetryOnFailure then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function RetryOnFailure:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
   -- Returns success or running if the child does, and running if the child 
-  -- returns failure. Delays for 100ms if the child fails to yield
+  -- returns failure. Delays for 100ms if the child fails.
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
@@ -1383,7 +1797,18 @@ if not twf.actionpath.action.RetryOnFailure then
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
   function RetryOnFailure:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if res == twf.actionpath.ActionResult.SUCCESS then 
+      return res
+    elseif res == twf.actionpath.ActionResult.RUNNING then 
+      return res
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      os.sleep(0.1)
+      return twf.actionpath.ActionResult.RUNNING
+    end
+    
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -1418,10 +1843,15 @@ if not twf.actionpath.action.RetryOnFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.RetryOnFailure.unserialize(serialized)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RetryOnFailure:serialize()
-    error('Not yet implemented')
+  function RetryOnFailure:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1433,10 +1863,16 @@ if not twf.actionpath.action.RetryOnFailure then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.RetryOnFailure.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RetryOnFailure.unserialize(serialized)
-    error('Not yet implemented')
+  function RetryOnFailure.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return RetryOnFailure:new({child = child})
   end
   
   twf.actionpath.action.RetryOnFailure = RetryOnFailure
@@ -1445,7 +1881,9 @@ end
 -----------------------------------------------------------------------------
 -- twf.actionpath.action.MoveResultInterpreter
 --
--- Returns success if the child action returns a successful move result
+-- Returns success if the child action returns a successful move result - 
+-- managing the interaction between actionpaths twf.movement.action.Action 
+-- style classes.
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.MoveResultInterpreter then
   local MoveResultInterpreter = {}
@@ -1467,7 +1905,15 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function MoveResultInterpreter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then
+      error('Expected o.child to be a table, but it is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1487,7 +1933,21 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function MoveResultInterpreter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    if fs.exists(stateTurtle.actionRecoveryFile) then 
+      local moved = stateTurtle:recoverAction()
+      if moved then 
+        return twf.actionpath.ActionResult.SUCCESS
+      end
+    end
+    
+    stateTurtle:prepareAction(self.child)
+    local res = self.child:perform(stateTurtle, pathState)
+    if twf.movement.MoveResult.isSuccess(res) then 
+      self.child:updateState(stateTurtle, pathState)
+      return twf.actionpath.ActionResult.SUCCESS
+    else 
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1522,10 +1982,15 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserialize(serialized)
   --
+  -- @param actionPath the action path 
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:serialize()
-    error('Not yet implemented')
+  function MoveResultInterpreter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1537,10 +2002,16 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter.unserialize(serialized)
-    error('Not yet implemented')
+  function MoveResultInterpreter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return MoveResultInterpreter:new({child = child})
   end
   
   twf.actionpath.action.MoveResultInterpreter = MoveResultInterpreter
@@ -1571,7 +2042,15 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function DigResultInterpreter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1591,7 +2070,13 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DigResultInterpreter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if twf.inventory.DigResult.isSuccess(res) then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else 
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1626,10 +2111,15 @@ if not twf.actionpath.action.DigResultInterpreter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserialize(serialized)
   --
+  -- @param actionPath the action path 
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:serialize()
-    error('Not yet implemented')
+  function DigResultInterpreter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1637,14 +2127,22 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action)
   --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserialize(serialized, actPath)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter.unserialize(serialized)
-    error('Not yet implemented')
+  function DigResultInterpreter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return DigResultInterpreter:new({child = child})
   end
   
   twf.actionpath.action.DigResultInterpreter = DigResultInterpreter
@@ -1675,7 +2173,15 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function PlaceResultInterpreter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1695,7 +2201,13 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function PlaceResultInterpreter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if twf.inventory.PlaceResult.isSuccess(res) then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1728,12 +2240,17 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized, actPath)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:serialize()
-    error('Not yet implemented')
+  function PlaceResultInterpreter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1743,12 +2260,18 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized, actPath)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath thea ction path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter.unserialize(serialized)
-    error('Not yet implemented')
+  function PlaceResultInterpreter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return PlaceResultInterpreter:new({child = child})
   end
   
   twf.actionpath.action.PlaceResultInterpreter = PlaceResultInterpreter
@@ -1779,7 +2302,15 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function DropResultInterpreter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action) but is a ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1799,7 +2330,13 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DropResultInterpreter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurle, pathState)
+    
+    if twf.inventory.DropResult.isSuccess(res) then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1832,12 +2369,17 @@ if not twf.actionpath.action.DropResultInterpreter then
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserialize(serialized, actPath)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:serialize()
-    error('Not yet implemented')
+  function DropResultInterpreter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable.child)
   end
   
   -----------------------------------------------------------------------------
@@ -1849,10 +2391,16 @@ if not twf.actionpath.action.DropResultInterpreter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter.unserialize(serialized)
-    error('Not yet implemented')
+  function DropResultInterpreter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return DropResultInterpreter:new({child = child})
   end
   
   twf.actionpath.action.DropResultInterpreter = DropResultInterpreter
@@ -1883,7 +2431,15 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
   function SuckResultInterpreter:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.child) ~= 'table' then 
+      error('Expected o.child to be a table (for an Action), but is a ' .. type(o.child))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -1903,7 +2459,13 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SuckResultInterpreter:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local res = self.child:perform(stateTurtle, pathState)
+    
+    if twf.inventory.SuckResult.isSuccess(res) then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1936,12 +2498,17 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserialize(serialized, actPath)
   --
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:serialize()
-    error('Not yet implemented')
+  function SuckResultInterpreter:serialize(actionPath)
+    local resultTable = {}
+    
+    resultTable.child = actionPath:serializeAction(self.child)
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -1953,338 +2520,22 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserialize(serialized)
   --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter.unserialize(serialized)
-    error('Not yet implemented')
+  function SuckResultInterpreter.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    local child = actionPath:unserializeAction(serTable.child)
+    
+    return SuckResultInterpreter:new({child = child})
   end
   
   twf.actionpath.action.SuckResultInterpreter = SuckResultInterpreter
 end
 
 -- Leafs
-
------------------------------------------------------------------------------
--- twf.actionpath.action.MoveAction
---
--- Moves the turtle in a specific direction a specific number of times. Made 
--- to be specifically compatible with action paths
------------------------------------------------------------------------------
-if not twf.actionpath.action.MoveAction then
-  local MoveAction = {}
-  
-  -----------------------------------------------------------------------------
-  -- The final position of the turtle when the move action has completed. Set 
-  -- up after being called again when the result was not RUNNING last time.
-  -----------------------------------------------------------------------------
-  MoveAction.finalPosition = nil
-  
-  -----------------------------------------------------------------------------
-  -- How many times to move
-  -----------------------------------------------------------------------------
-  MoveAction.times = nil
-  
-  -----------------------------------------------------------------------------
-  -- twf.movement.direction to move in, either FORWARD, UP, DOWN, or BACK
-  -----------------------------------------------------------------------------
-  MoveAction.direction = nil
-  
-  -----------------------------------------------------------------------------
-  -- Creates a new twf.actionpath.action.MoveAction instance
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveAction({
-  --     direction = twf.movement.direction.UP,
-  --     times = 2
-  --   })
-  --
-  -- @param o superseding object
-  -- @return  new instance of move action
-  -- @error   if o.direction is not a valid direction to move in
-  -----------------------------------------------------------------------------
-  function MoveAction:new(o)
-      o = o or {}
-      setmetatable(o, self)
-      self.__index = self
-      
-      local dirValid =       o.direction == twf.movement.direction.FORWARD
-      dirValid = dirValid or o.direction == twf.movement.direction.BACK
-      dirValid = dirValid or o.direction == twf.movement.direction.UP
-      dirValid = dirValid or o.direction == twf.movement.direction.DOWN
-      
-      if not dirValid then 
-        error('MoveAction:new() Expected direction twf.movement.direction.FORWARD, BACK, UP, or DOWN!')
-      end
-      
-      if type(o.times) ~= 'number' || o.times < 1 then
-        o.times = 1
-      end
-      
-      return o
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Returns success if the turtle has reached its destination. If its 
-  -- destination has not been set, sets the destination and returns RUNNING.
-  -- If it has been set, moves in the appropriate direction and returns RUNNING.
-  -- Cannot fail - so be careful of obstructions!
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.MoveAction({
-  --     direction = twf.movement.direction.UP,
-  --     times = 2
-  --   })
-  --   local res = act:perform(st, {}) -- RUNNING (set destination)
-  --   res = act:perform(st, {}) -- RUNNING (move up)
-  --   res = act:perform(st, {}) -- RUNNING (move up)
-  --   res = act:perform(st, {}) -- SUCCESS (destination reached)
-  --
-  -- @param stateTurtle the state turtle to act on 
-  -- @param pathState   an object containing the state of this actionpath. May be
-  --                    modified to save state between calls, but should not break
-  --                    serialization with textutils.serialize
-  --
-  -- @return result of this action 
-  -----------------------------------------------------------------------------
-  function MoveAction:perform(stateTurtle, pathState)
-    local delegate = twf.movement.action.MoveAction:new({direction = self.direction})
-    
-    if not self.finalPosition then 
-      local fakeStateTurtle = {
-        position = {
-          x = stateTurtle.position.x,
-          y = stateTurtle.position.y,
-          z = stateTurtle.position.z
-        }
-      }
-      
-      for i = 1, self.times, 1 do
-        delegate.updateState(fakeStateTurtle)
-      end
-      self.finalPosition = fakeStateTurtle.position
-      return twf.actionpath.ActionResult.RUNNING
-    end
-    
-    do
-      local notAtDest =        self.finalPosition.x ~= stateTurtle.position.x
-      notAtDest = notAtDest or self.finalPosition.y ~= stateTurtle.position.y
-      notAtDest = notAtDest or self.finalPosition.z ~= stateTurtle.position.z
-      
-      if not notAtDest then
-        return twf.actionpath.ActionResult.SUCCESS 
-      end
-    end
-    
-    stateTurtle:prepareAction(delegate)
-    local result = delegate:perform()
-    if twf.movement.MovementResult.isSuccess(result) then
-      delegate:updateState(st)
-    end
-    stateTurtle:finishAction(delegate)
-    
-    return twf.actionpath.ActionResult.RUNNING
-  end
-  
-  -----------------------------------------------------------------------------
-  -- No-op
-  -- 
-  -- @param stateTurtle the state turtle to update
-  -- @param pathState   the path state
-  -----------------------------------------------------------------------------
-  function MoveAction:updateState(stateTurtle, pathState)
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Returns a unique name for this type of action.
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.MoveAction
-  --   print(twf.actionpath.action.MoveAction.name())
-  --
-  -- @return a unique name for this type of action.
-  -----------------------------------------------------------------------------
-  function MoveAction.name()
-    return 'twf.actionpath.action.MoveAction'
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Serializes this action
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveAction:new({direction = twf.movement.direction.FORWARD, times = 2})
-  --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.MoveAction.unserialize(serialized)
-  --
-  -- @param actionPath the action path, used for serializing children
-  -- @return           string serialization of this action
-  -----------------------------------------------------------------------------
-  function MoveAction:serialize(actionPath)
-    local resultTable = {}
-    
-    resultTable.direction = self.direction
-    resultTable.times = self.times
-    resultTable.finalPosition = self.finalPosition
-    
-    return textutils.serialize(resultTable)
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Unserializes an action serialized by this action types serialize
-  -- 
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveAction:new({direction = twf.movement.direction.FORWARD, times = 2})
-  --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.MoveAction.unserialize(serialized)
-  --
-  -- @return string serialization of this action
-  -----------------------------------------------------------------------------
-  function MoveAction.unserialize(serialized)
-    local serTable = textutils.unserialize(serialized)
-    
-    local direction = serTable.direction
-    local times = serTable.times
-    local finalPos = serTable.finalPosition
-    
-    return MoveAction:new({direction = direction, times = times, finalPosition = finalPos})
-  end
-  
-  twf.actionpath.action.MoveAction = MoveAction
-end
-
------------------------------------------------------------------------------
--- twf.actionpath.action.TurnAction
---
--- Turns the turtle in a specific direction a specific number of times. Made 
--- to be specifically compatible with action paths
------------------------------------------------------------------------------
-if not twf.actionpath.action.TurnAction then
-  local TurnAction = {}
-  
-  -----------------------------------------------------------------------------
-  -- The final direction of the turtle when the move action has completed. Set 
-  -- up after being called again when the result was not RUNNING last time.
-  -----------------------------------------------------------------------------
-  TurnAction.finalDirection = nil
-  
-  -----------------------------------------------------------------------------
-  -- How many times to turn
-  -----------------------------------------------------------------------------
-  TurnAction.times = nil
-  
-  -----------------------------------------------------------------------------
-  -- twf.movement.direction to move in, either LEFT or RIGHT
-  -----------------------------------------------------------------------------
-  TurnAction.direction = nil
-  
-  -----------------------------------------------------------------------------
-  -- Creates a new twf.actionpath.action.TurnAction instance
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.TurnAction({
-  --     direction = twf.movement.direction.LEFT,
-  --     times = 2
-  --   })
-  --
-  -- @param o superseding object
-  -- @return  new instance of move action
-  -- @error   if o.direction is not a valid direction to move in
-  -----------------------------------------------------------------------------
-  function TurnAction:new(o)
-      error('Not yet implemented')
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Returns success if the turtle has reached its destination. If its 
-  -- destination has not been set, sets the destination and returns RUNNING.
-  -- If it has been set, turns in the appropriate direction and returns RUNNING.
-  -- Cannot fail - so be careful of obstructions!
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.TurnAction({
-  --     direction = twf.movement.direction.LEFT,
-  --     times = 2
-  --   })
-  --   local res = act:perform(st, {}) -- RUNNING (set destination)
-  --   res = act:perform(st, {}) -- RUNNING (move left)
-  --   res = act:perform(st, {}) -- RUNNING (move left)
-  --   res = act:perform(st, {}) -- SUCCESS (destination reached)
-  --
-  -- @param stateTurtle the state turtle to act on 
-  -- @param pathState   an object containing the state of this actionpath. May be
-  --                    modified to save state between calls, but should not break
-  --                    serialization with textutils.serialize
-  --
-  -- @return result of this action 
-  -----------------------------------------------------------------------------
-  function TurnAction:perform(stateTurtle, pathState)
-    error('Not yet implemented')
-  end
-  
-  -----------------------------------------------------------------------------
-  -- No-op
-  -- 
-  -- @param stateTurtle the state turtle to update
-  -- @param pathState   the path state
-  -----------------------------------------------------------------------------
-  function TurnAction:updateState(stateTurtle, pathState)
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Returns a unique name for this type of action.
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.TurnAction
-  --   print(twf.actionpath.action.TurnAction.name())
-  --
-  -- @return a unique name for this type of action.
-  -----------------------------------------------------------------------------
-  function TurnAction.name()
-    return 'twf.actionpath.action.TurnAction'
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Serializes this action
-  --
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.TurnAction:new({direction = twf.movement.direction.FORWARD, times = 2})
-  --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.TurnAction.unserialize(serialized)
-  --
-  -- @param actionPath the action path, used for serializing children
-  -- @return           string serialization of this action
-  -----------------------------------------------------------------------------
-  function TurnAction:serialize(actionPath)
-    error('Not yet implemented')
-  end
-  
-  -----------------------------------------------------------------------------
-  -- Unserializes an action serialized by this action types serialize
-  -- 
-  -- Usage:
-  --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.TurnAction:new({direction = twf.movement.direction.LEFT, times = 2})
-  --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.TurnAction.unserialize(serialized)
-  --
-  -- @return string serialization of this action
-  -----------------------------------------------------------------------------
-  function TurnAction.unserialize(serialized)
-    error('Not yet implemented')
-  end
-  
-  twf.actionpath.action.TurnAction = TurnAction
-end
 
 -----------------------------------------------------------------------------
 -- twf.actionpath.action.FuelCheckAction
@@ -2312,7 +2563,15 @@ if not twf.actionpath.action.FuelCheckAction then
   -- @error   if o.fuelLevel is nil or negative
   -----------------------------------------------------------------------------
   function FuelCheckAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.fuelLevel) ~= 'number' then 
+      error('Expected o.fuelLevel to be a number but was ' .. type(o.fuelLevel))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -2332,7 +2591,13 @@ if not twf.actionpath.action.FuelCheckAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function FuelCheckAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local succ = turtle.getFuelLevel() >= self.fuelLevel
+    
+    if succ then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else 
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2371,7 +2636,11 @@ if not twf.actionpath.action.FuelCheckAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function FuelCheckAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.fuelLevel = self.fuelLevel
+    
+    return textutils.serialize(resultTable.fuelLevel)
   end
   
   -----------------------------------------------------------------------------
@@ -2386,7 +2655,11 @@ if not twf.actionpath.action.FuelCheckAction then
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
   function FuelCheckAction.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local fuelLevel = serTable.fuelLevel 
+    
+    return FuelCheckAction:new({fuelLevel = fuelLevel})
   end
   
   twf.actionpath.action.FuelCheckAction = FuelCheckAction
@@ -2456,7 +2729,133 @@ if not twf.actionpath.action.InventoryCheckAction then
   --          'maximum'
   -----------------------------------------------------------------------------
   function InventoryCheckAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.item) ~= 'table' then 
+      error('Expected o.item to be a table but is ' .. type(o.item))
+    end
+    
+    if type(o.item.name) ~= 'string' then 
+      error('Expected o.item.name to be a string but is ' .. type(o.item.name))
+    end
+    
+    if type(o.item.count) ~= 'number' then 
+      error('Expected o.item.count to be a number but is ' .. type(o.item.count))
+    end
+    
+    if o.item.name ~= 'any' and type(o.item.damage) ~= 'number' then 
+      error('If o.item.name (is ' .. o.item.name .. ') is not \'any\' then o.item.damage should be a number but is ' .. type(o.item.damage))
+    end
+    
+    if type(o.slots) == 'string' then 
+      if o.slots ~= 'any' then 
+        error('If o.slots is a string then it must be \'any\' but is \'' .. o.slots .. '\'')
+      end
+    elseif type(o.slots) == 'table' then 
+      if #o.slots < 1 then 
+        error('Expected o.slots to be a table with at least 1 number in it, but is ' .. textutils.serialize(o.slots))
+      end
+      
+      for i = 1, #o.slots do
+        if type(o.slots[i]) ~= 'number' then 
+          error('o.slots should only contain numbers, but o.slots[' .. i .. '] is ' .. type(o.slots[i]))
+        end
+      end
+    else 
+      error('Expected o.slots to be a table or string but is ' .. type(o.slots))
+    end
+    
+    local countCheckIsValid =                o.countCheck == 'none'
+    countCheckIsValid = countCheckIsValid or o.countCheck == 'minimum'
+    countCheckIsValid = countCheckIsValid or o.countCheck == 'exact'
+    countCheckIsValid = countCheckIsValid or o.countCheck == 'maximum'
+    
+    if not countCheckIsValid then 
+      error('Expected o.countCheck to be \'none\', \'minimum\', \'exact\', or \'maximum\' but is \'' .. o.countCheck .. '\'')
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Checks if the specified item matches this inventory check actions item 
+  -- requirements (not including count or slot)
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.InventoryCheckAction:new(
+  --     {
+  --       item = { name = 'any', count = 64 },
+  --       slots = { 16 },
+  --       countCheck = 'exact' 
+  --     })
+  --   local item = twf.inventory.ItemDetail:new({name = 'minecraft:log', damage = 1, count = 32})
+  --   local res = act:itemMatches(item)
+  --   -- prints true
+  --   print(res)
+  --
+  -- @param itemDetail twf.inventory.ItemDetail item detail to check
+  -- @return boolean true if the itemDetail fits the bill, false otherwise
+  -----------------------------------------------------------------------------
+  function InventoryCheckAction:itemMatches(itemDetail)
+    if itemDetail == nil then return false end
+    
+    if self.item.name == 'any' then 
+      return true
+    end
+    
+    if self.item.name ~= itemDetail.name then return false end
+    if strict and self.item.damage ~= itemDetail.damage then return false end
+    
+    return true
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Creates a copy of the state turtles inventory, will all of the slots that 
+  -- should not be checked by this inventory check action emptied.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   st:loadInventoryFromTurtle()
+  --   local act = twf.actionpath.action.InventoryCheckAction:new(
+  --     {
+  --       item = { name = 'any', count = 64 },
+  --       slots = { 16 },
+  --       countCheck = 'exact' 
+  --     })
+  --   local res = act:inventoryForSlots(st)
+  --   -- Will print an inventory with slots 1-15 empty, regardless of the real
+  --   -- inventoy of the turtle
+  --   print(res:toString())
+  --
+  -- @param stateTurtle the state turtle
+  -- @return clone of turtles inventory, with irrelevant slots emptied
+  -----------------------------------------------------------------------------
+  function InventoryCheckAction:inventoryForSlots(stateTurtle)
+    local inv = stateTurtle.inventory:clone()
+    
+    if self.slots == 'any' then 
+      return inv 
+    end
+    
+    for i = 1, 16 do 
+      local allowed = false
+      for j = 1, #slots do 
+        if slots[j] == i then 
+          allowed = true
+          break
+        end
+      end
+      
+      if not allowed then 
+        inv.setItemDetailAt(i, nil)
+      end
+    end
+    
+    return inv
   end
   
   -----------------------------------------------------------------------------
@@ -2481,7 +2880,35 @@ if not twf.actionpath.action.InventoryCheckAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function InventoryCheckAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    local relevantInventory = self:inventoryForSlots(stateTurtle)
+    local totalCount = 0
+    
+    for i = 1, 16 do 
+      local item = relevantInventory.getItemDetailAt(i)
+      
+      if item and self:itemMatches(item) then 
+        totalCount = totalCount + item.count
+      end
+    end
+    
+    local succ = false
+    if self.countCheck == 'none' then 
+      succ = totalCount > 0 
+    elseif self.countCheck == 'minimum' then 
+      succ = totalCount > self.item.count
+    elseif self.countCheck == 'exact' then 
+      succ = totalCount == self.item.count
+    elseif self.countCheck == 'maximum' then 
+      succ = totalCount < self.item.count
+    else 
+      error('Unexpected countcheck ' .. self.countCheck)
+    end
+    
+    if succ then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else
+      return twf.actionpath.ActionResult.FAILURE
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2520,7 +2947,14 @@ if not twf.actionpath.action.InventoryCheckAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function InventoryCheckAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.items = self.items
+    resultTable.slots = self.slots
+    resultTable.countCheck = self.countCheck
+    resultTable.strict = self.strict
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -2532,10 +2966,18 @@ if not twf.actionpath.action.InventoryCheckAction then
   --   local serialized = act:serialize(actPath)
   --   local unserialized = twf.actionpath.action.InventoryCheckAction.unserialize(serialized)
   --
+  -- @param serialized the serialized string
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
   function InventoryCheckAction.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local items = serTable.items
+    local slots = serTable.slots
+    local countCheck = serTable.countCheck
+    local strict = serTable.strict
+    
+    return InventoryCheckAction:new({items = items, slots = slots, countCheck = countCheck, strict = strict})
   end
   
   twf.actionpath.action.InventoryCheckAction = InventoryCheckAction
@@ -2566,7 +3008,19 @@ if not twf.actionpath.action.InventorySelectAction then
   -- @error   if o.slotIndex is nil or not on [1, 16]
   -----------------------------------------------------------------------------
   function InventorySelectAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.slotIndex) ~= 'number' then 
+      error('Expected o.slotIndex to be a number but is ' .. type(o.slotIndex))
+    end
+    
+    if o.slotIndex < 1 or o.slotIndex > 16 then 
+      error('Expected o.slotIndex to be on the interval [1, 16] but is ' .. o.slotIndex)
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -2585,7 +3039,8 @@ if not twf.actionpath.action.InventorySelectAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function InventorySelectAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    turtle.select(self.slotIndex)
+    stateTurtle.selectedSlot = self.slotIndex
   end
   
   -----------------------------------------------------------------------------
@@ -2624,7 +3079,11 @@ if not twf.actionpath.action.InventorySelectAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function InventorySelectAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.slotIndex = self.slotIndex
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -2639,7 +3098,11 @@ if not twf.actionpath.action.InventorySelectAction then
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
   function InventorySelectAction.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local slotIndex = serTable.slotIndex
+    
+    return InventorySelectAction:new({slotIndex = slotIndex})
   end
   
   twf.actionpath.action.InventorySelectAction = InventorySelectAction
@@ -2657,10 +3120,11 @@ if not twf.actionpath.action.DropAction then
   -----------------------------------------------------------------------------
   -- Describes what method is being used to decide what to drop, one of the 
   -- following:
-  --   'slot'     - Dropping by slot indexes
-  --   'item'     - Dropping specific items and specific maximum amounts
-  --   'itemType' - Dropping a specific type of items
-  --   'all'      - Dropping everything the turtle has
+  --   'slot'           - Dropping by slot indexes
+  --   'item'           - Dropping specific items and specific maximum amounts
+  --   'itemType'       - Dropping a specific type of items
+  --   'exceptItemType' - Dropping everything *except* a specific item type
+  --   'all'            - Dropping everything the turtle has
   -----------------------------------------------------------------------------
   DropAction.dropBy = nil
   
@@ -2679,6 +3143,7 @@ if not twf.actionpath.action.DropAction then
   
   -----------------------------------------------------------------------------
   -- What items (or types of items) to drop, if the dropBy is item or itemType
+  -- What items not to drop if dropBy is exceptItemType
   -- Examples:
   --   { {name = 'minecraft:log', damage = 1, count = 32} }
   -----------------------------------------------------------------------------
@@ -2686,7 +3151,7 @@ if not twf.actionpath.action.DropAction then
   
   -----------------------------------------------------------------------------
   -- If item types should be compared strictly or not. Ignored if the dropBy 
-  -- is not 'item' or 'itemType'
+  -- is not 'item' 'itemType', or 'exceptItemType'
   -----------------------------------------------------------------------------
   DropAction.itemStrict = false
   
@@ -2700,23 +3165,321 @@ if not twf.actionpath.action.DropAction then
   --
   -- @param o superseding object
   -- @return  a new instance of this action
-  -- @error   if o.dropBy is nil or not 'slot', 'item', 'itemType' or 'all'
+  -- @error   if o.dropBy is nil or not 'slot', 'item', 'itemType', 
+  --         'exceptItemType' or 'all'
   -- @error   if o.dropBy is 'slot' and o.slots is nil or empty
-  -- @error   if o.dropBy is 'item' or 'itemType' and o.items is nil or empty
+  -- @error   if o.dropBy is 'item', 'itemType' 'exceptItemType' and o.items is
+  --          nil or empty
   -- @error   if o.direction is not FORWARD, UP, or DOWN
   -----------------------------------------------------------------------------
   function DropAction:new(o)
-    error('Not yet implemented')
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.dropBy) ~= 'string' then 
+      error('Expected o.dropBy to be a string but is ' .. type(o.dropBy))
+    end
+    
+    local dropByValid =          o.dropBy == 'slot'
+    dropByValid = dropByValid or o.dropBy == 'item'
+    dropByValid = dropByValid or o.dropBy == 'itemType'
+    dropByValid = dropByValid or o.dropBy == 'exceptItemType'
+    dropByValid = dropByValid or o.dropBy == 'all'
+    
+    if not dropByValid then 
+      error('Expected o.dropBy to be \'slot\', \'item\', \'itemType\', \'exceptItemType\' or \'all\' but is ' .. o.dropBy)
+    end
+    
+    if o.dropBy == 'slot' then 
+      if type(o.slots) ~= 'table' then 
+        error('Expected o.slots to be a table since o.dropBy is \'slot\' but o.slots is ' .. type(o.slots))
+      end
+      
+      if #o.slots < 1 then 
+        error('Expected o.slots to have something in it since o.dropBy is \'slot\' but o.slots is empty')
+      end
+      
+      for i = 1, #o.slots do 
+        if type(o.slots[i]) ~= 'number' then 
+          error('Expected o.slots to be a table of numbers, but type(o.slots[' .. i .. ']) = ' .. type(o.slots[i]))
+        end
+      end
+    end
+    
+    if o.dropBy == 'item' or o.dropBy == 'itemType' or o.dropBy == 'exceptItemType' then 
+      if type(o.items) ~= 'table' then 
+        error('Since o.dropBy is \'' .. o.dropBy .. '\', expected o.items to be a table but o.items is ' .. type(o.items))
+      end
+      
+      if #o.items < 1 then 
+        error('Since o.dropBy is \'' .. o.dropBy .. '\', expected o.items to be a table with content, but o.items is empty!')
+      end
+    end
+    
+    local dirIsValid =         o.direction == twf.movement.direction.FORWARD 
+    dirIsValid = dirIsValid or o.direction == twf.movement.direction.UP 
+    dirIsValid = dirIsValid or o.direction == twf.movement.direction.DOWN 
+    
+    if not dirIsValid then 
+      error('Expected o.direction to be FORWARD, UP, or DOWN but is ' .. o.direction)
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
-  -- Drops the appropriate items/slots. Returns failure if kess than the 
-  -- expected items are dropped for the turtles starting inventory.
+  -- Drops a maximum of the specified amount for the current slot. Normally for 
+  -- internal use
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.DropAction:new({slotIndex = 1})
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'slot', 
+  --     slots = { 16 }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:drop(st, {})
+  --
+  -- @param stateTurtle the stateful turtle
+  -- @param pathState the current state of the action path
+  -- @param amount (optional) maximum number to drop 
+  -- @return twf.actionpath.ActionResult, twf.inventory.ItemDetail success 
+  --         if any items are dropped, failure otherwise. The item detail is 
+  --         for what items were dropped, if any
+  -----------------------------------------------------------------------------
+  function DropAction:drop(stateTurtle, pathState, amount)
+    local delegate = twf.inventory.action.DropAction:new({direction = self.direction, amount = amount})
+    local res, item = delegate:perform(stateTurtle, pathState)
+    
+    if twf.inventory.DropResult.isSuccess(res) then 
+      return twf.actionpath.ActionResult.SUCCESS, item
+    else 
+      return twf.actionpath.ActionResult.FAILURE, item
+    end
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Drops items by slot. Normally for internal use.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action, twf.movement.action, twf.inventory.action)
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'slot', 
+  --     slots = { 16 }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:dropBySlot(st, actPath.pathState)  
+  --
+  -- @param stateTurtle the state turtle
+  -- @param pathState the path state
+  -- @return twf.actionpath.ActionResult
+  -----------------------------------------------------------------------------
+  function DropAction:dropBySlot(stateTurtle, pathState)
+    for i = 1, #slots do 
+      stateTurtle:selectSlot(slots[i])
+      
+      local res, item = self:drop(stateTurtle, pathState)
+      if res == twf.actionpath.ActionResult.FAILURE then 
+        return res
+      end
+    end
+    
+    return twf.actionpath.ActionResult.SUCCESS
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Drops items with the 'item' dropBy type. Normally for internal use.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action, twf.movement.action, twf.inventory.action)
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'item', 
+  --     items = { {name = 'minecraft:log', damage = 1, count = 32} }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:dropByItem(st, actPath.pathState)  
+  --
+  -- @param stateTurtle the state turtle
+  -- @param pathState the path state
+  -- @return twf.actionpath.ActionResult success if expected number of items
+  --         are dropped, failure otherwise
+  -----------------------------------------------------------------------------
+  function DropAction:dropByItem(stateTurtle, pathState)
+    for i = 1, #self.items do 
+      local toDrop = self.items[i].count
+      local nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
+      
+      while nextIndex > 0 and toDrop > 0 do 
+        stateTurtle:selectSlot(nextIndex)
+        
+        local res, item = self:drop(stateTurtle, pathState, toDrop)
+        
+        if res == twf.actionpath.ActionResult.FAILURE then 
+          return res
+        end
+        
+        if not item then 
+          error('Weird state, res is failure but item is nil!')
+        end
+        
+        toDrop = toDrop - item.count
+        nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
+      end
+    end
+    
+    return twf.actionpath.ActionResult.SUCCESS
+  end
+ 
+  -----------------------------------------------------------------------------
+  -- Drops items with the 'itemType' dropBy type. Normally for internal use.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action, twf.movement.action, twf.inventory.action)
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'itemType', 
+  --     items = { {name = 'minecraft:log', damage = 1, count = 1} }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:dropByItemType(st, actPath.pathState)  
+  --
+  -- @param stateTurtle the state turtle
+  -- @param pathState the path state
+  -- @return twf.actionpath.ActionResult success if expected number of items 
+  --         are dropped, failure otherwise
+  -----------------------------------------------------------------------------
+  function DropAction:dropByItemType(stateTurtle, pathState)
+    for i = 1, #self.items do 
+      local nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
+      
+      while nextIndex > 0 do 
+        stateTurtle:selectSlot(nextIndex)
+        
+        local res, item = self:drop(stateTurtle, pathState, toDrop)
+        
+        if res == twf.actionpath.ActionResult.FAILURE then 
+          return res
+        end
+        
+        nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
+      end
+    end
+    
+    return twf.actionpath.ActionResult.SUCCESS
+  end
+  
+  
+  -----------------------------------------------------------------------------
+  -- Drops items with the 'exceptItemType' dropBy type. Normally for internal 
+  -- use.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action, twf.movement.action, twf.inventory.action)
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'exceptItemType', 
+  --     items = { {name = 'minecraft:log', damage = 1, count = 1} }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:dropByExceptItemType(st, actPath.pathState)  
+  --
+  -- @param stateTurtle the state turtle
+  -- @param pathState the path state
+  -- @return twf.actionpath.ActionResult success if expected number of items
+  --         are dropped, failure otherwise
+  -----------------------------------------------------------------------------
+  function DropAction:dropByExceptItemType(stateTurtle, pathState)
+    for i = 1, 16 do 
+      local item = stateTurtle.getItemDetailAt(i)
+      
+      if item then 
+        local skip = false
+        if self.itemStrict then 
+          for j = 1, #items do 
+            skip = item:lenientItemEquals(items[j])
+            if skip then break end
+          end
+        else 
+          for j = 1, #items do 
+            skip = item:strictItemEquals(items[j])
+            if skip then break end 
+          end
+        end
+        
+        if not skip then 
+          stateTurtle:selectSlot(i)
+          local res, item = self:drop()
+          
+          if res == twf.actionpath.ActionResult.FAILURE then 
+            return res 
+          end
+        end
+      end
+    end
+    
+    return twf.actionpath.ActionResult.SUCCESS
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Drops items with the 'all' dropBy type. Normally for internal use.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local actPath = twf.actionpath.ActionPath:new()
+  --   actPath:registerActions(twf.actionpath.action, twf.movement.action, twf.inventory.action)
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'all',  
+  --     direction = twf.movement.direction.FORWARD
+  --   })
+  --   act:dropByAll(st, actPath.pathState)  
+  --
+  -- @param stateTurtle the state turtle
+  -- @param pathState the path state
+  -- @return twf.actionpath.ActionResult success if expected number of items
+  --         are dropped, failure otherwise
+  -----------------------------------------------------------------------------
+  function DropAction:dropByAll(stateTurtle, pathState)
+    local nextIndex = stateTurtle.inventory:firstIndexOfFilledSlot()
+    
+    while nextIndex > 0 do 
+      stateTurtle:selectSlot(nextIndex)
+      local res, item = self:drop()
+      
+      if res == twf.actionpath.ActionResult.FAILURE then 
+        return res
+      end
+      
+      nextIndex = stateTurtle.inventory:firstIndexOfFilledSlot()
+    end
+    
+    return twf.actionpath.ActionResult.FAILURE
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Drops the appropriate items/slots. Returns failure if less than the 
+  -- expected items are dropped for the turtles starting inventory. 
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.DropAction:new({
+  --     dropBy = 'slot', 
+  --     slots = { 16 }, 
+  --     direction = twf.movement.direction.FORWARD
+  --   })
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2726,28 +3489,21 @@ if not twf.actionpath.action.DropAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DropAction:perform(stateTurtle, pathState)
-    error('Not yet implemented!')
+    if     self.dropBy == 'slot'           then return self:dropBySlot(stateTurtle, pathState)
+    elseif self.dropBy == 'item'           then return self:dropByItem(stateTurtle, pathState)
+    elseif self.dropBy == 'itemType'       then return self:dropByItemType(stateTurtle, pathState)
+    elseif self.dropBy == 'exceptItemType' then return self:dropByExceptItemType(stateTurtle, pathState)
+    elseif self.dropBy == 'all'            then return self:dropByAll(stateTurtle, pathState)
+    else error('Unexpected dropBy: ' .. self.dropBy) end
   end
   
   -----------------------------------------------------------------------------
-  -- Called when this action completes successfully - should update the state
-  -- of the turtle.
+  -- No-op
   --
-  -- Usage:
-  --   dofile('twf_movement.lua')
-  --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.DropAction:new(
-  --     {dropBy = 'any', direction = twf.movement.direction.FORWARD})
-  --   local result, items = act:perform()
-  --   if twf.inventory.DropResult.isSuccess(result) then
-  --     act:updateState(st)
-  --   end
-  -- 
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
   function DropAction:updateState(stateTurtle, pathState)
-    error('Not yet implemented')
   end
   
   -----------------------------------------------------------------------------
@@ -2777,7 +3533,22 @@ if not twf.actionpath.action.DropAction then
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
   function DropAction:serialize(actionPath)
-    error('Not yet implemented')
+    local resultTable = {}
+    
+    resultTable.dropBy = self.dropBy
+    resultTable.direction = self.direction
+    resultTable.slots = self.slots
+    
+    if self.items then 
+      resultTable.items = {}
+      for i = 1, #self.items do 
+        resultTable.items[i] = self.items[i]:serialize()
+      end
+    end
+    
+    resultTable.itemStrict = self.itemStrict
+    
+    return textutils.serialize(resultTable)
   end
   
   -----------------------------------------------------------------------------
@@ -2792,7 +3563,29 @@ if not twf.actionpath.action.DropAction then
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
   function DropAction.unserialize(serialized)
-    error('Not yet implemented')
+    local serTable = textutils.unserialize(serialized)
+    
+    local dropBy = serTable.dropBy
+    local direction = serTable.direction
+    local slots = serTable.slots
+    
+    local items = nil
+    if serTable.items then 
+      items = {}
+      for i = 1, #serTable.items do 
+        items[i] = twf.inventory.ItemDetail.unserialize(serTable.items[i])
+      end
+    end
+    
+    local itemStrict = serTable.itemStrict 
+    
+    return DropAction:new({
+      dropBy = dropBy,
+      direction = direction,
+      slots = slots,
+      items=  items,
+      itemStrict = itemStrict
+    })
   end
   
   twf.actionpath.action.DropAction = DropAction
