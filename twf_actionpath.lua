@@ -3677,6 +3677,8 @@ if not twf.actionpath.action.InventorySelectAction then
   function InventorySelectAction:perform(stateTurtle, pathState)
     turtle.select(self.slotIndex)
     stateTurtle.selectedSlot = self.slotIndex
+	
+	return twf.actionpath.ActionResult.SUCCESS
   end
   
   -----------------------------------------------------------------------------
