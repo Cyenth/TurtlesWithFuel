@@ -2573,6 +2573,35 @@ if not twf.movement.StatefulTurtle then
   end
   
   -----------------------------------------------------------------------------
+  -- Loads the stateful turtle that was saved to the specified file. Does not 
+  -- attempt to recovery any actions or initialize the turtle if the file 
+  -- does not exist.
+  --
+  -- Usage:
+  --   dofile('twf_movement.lua')
+  --   local saved = StatefulTurtle.loadSavedState('turtle_state.dat')
+  --   -- saved may be nil
+  --
+  -- @param saveFile the filename to load from 
+  -- @return         the saved stateful turtle or nil
+  -----------------------------------------------------------------------------
+  function StatefulTurtle.loadSavedState(saveFile)
+    if fs.exists(self.saveFile) then 
+      local file = fs.open(self.saveFile, 'r')
+      local saved = file.readAll()
+      file.close()
+      
+      local st = twf.movement.StatefulTurtle.unserialize(saved)
+      st.fuelLevel = turtle.getFuelLevel()
+      st:loadInventoryFromTurtle()
+      st.selectedSlot = turtle.getSelectedSlot()
+      return st
+    end
+    
+    return nil
+  end
+  
+  -----------------------------------------------------------------------------
   -- Saves this instance to the disk, creating the file or overwriting its 
   -- content as necessary. This is the prefered method of saving/loading when 
   -- the turtle isn't recovering from being unloaded.

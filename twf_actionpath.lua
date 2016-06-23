@@ -519,21 +519,20 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
   --   st:executeActionPath(myProg, 'my_program' 'state', 'actpath_state')
   --
   -- Remarks:
-  --   This function will normally never return 
+  --   This function will normally never return if repeatForever is true
   --
   -- @param actionPath         the action path prepared with the necessary 
   --                           actions for loading.
   -- @param actionPathFilePref actionPathFile where the action file is saved 
   --                           normally. Postfixed with .actionpath
-  -- @param statePrefix        prefix for the turtle state. 
-  --                           Postfixed with .dat and _action_recovery.dat
   -- @param actPathStatePrefix prefix for the action path state.
   --                           Postfixed with _recovery.dat
+  -- @param repeatForever      (optional) default true - if this action path 
+  --                           should be continuously ticked, forever.
   -- @see                      twf.actionpath.ActionPath
   -----------------------------------------------------------------------------
-  function StatefulTurtle:executeActionPath(actionPath, actionPathFilePref, statePrefix, actPathStatePrefix)
-    self.saveFile = statePrefix .. '.dat'
-    self.actionRecoveryFile = actPathStatePrefix .. '_action_recovery.dat'
+  function StatefulTurtle:executeActionPath(actionPath, actionPathFilePref, actPathStatePrefix, repeatForever)
+    if repeatForever == nil then repeatForever = true end
     
     local actionPathFile = actionPathFilePref .. '.actionpath'
     local actionPathRecoveryFile = actPathStatePrefix .. '_recovery.dat'
@@ -559,6 +558,8 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
       -- unloaded here, which is pretty much guarranteed to work
       os.queueEvent("twfFakeEventName")
       os.pullEvent("twfFakeEventName")
+      
+      if not repeatForever then break end
     end
   end
   
@@ -4524,6 +4525,11 @@ if not twf.actionpath.action.CounterAction then
   twf.actionpath.action.CounterAction = CounterAction
 end
 
+-----------------------------------------------------------------------------
+-- twf.actionpath.action.DieAction
+--
+-- Dies, optionally printing a message
+-----------------------------------------------------------------------------
 if not twf.actionpath.action.DieAction then
   local DieAction = {}
   
@@ -4671,4 +4677,158 @@ if not twf.actionpath.action.DieAction then
   end
   
   twf.actionpath.action.DieAction = DieAction
+end
+
+-----------------------------------------------------------------------------
+-- twf.actionpath.action.MessageAction
+--
+-- Prints a message
+-----------------------------------------------------------------------------
+if not twf.actionpath.action.MessageAction then
+  local MessageAction = {}
+  
+  -----------------------------------------------------------------------------
+  -- The message to display 
+  -----------------------------------------------------------------------------
+  MessageAction.message = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new instance of this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MessageAction:new({message = 'hi'})
+  --
+  -- @param o superseding object
+  -- @return  a new instance of this action
+  -----------------------------------------------------------------------------
+  function MessageAction:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.message) ~= 'string' then 
+      error('Expected o.message to be a string but got ' .. type(o.message))
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Performs this action. Never returns
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.MessageAction:new({message = 'hi'})
+  --   local res = act:perform(st, {})
+  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -- @error always
+  -----------------------------------------------------------------------------
+  function MessageAction:perform(stateTurtle, pathState)
+    print(self.message)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unused
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function MessageAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.MessageAction
+  --   print(twf.actionpath.action.MessageAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function MessageAction.name()
+    return 'twf.actionpath.action.MessageAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MessageAction:new()
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.MessageAction.unserializeObject(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function MessageAction:serializableObject(actionPath)
+    local resultTable = {}
+    
+    resultTable.message = self.message
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serializableObject
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MessageAction:new({message = 'hi'})
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.MessageAction.unserializeObject(serialized)
+  --
+  -- @param serialized the serialized object
+  -- @param actionPath the action path 
+  -- @return serialized action
+  -----------------------------------------------------------------------------
+  function MessageAction.unserializeObject(serialized, actionPath)
+    local message = serialized.message
+    
+    return MessageAction:new({message = message})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MessageAction:new({message = 'hi'})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.MessageAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function MessageAction:serialize(actionPath)
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.MessageAction:new({message = 'hi'})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.MessageAction.unserialize(serialized, actPath)
+  --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function MessageAction.unserialize(serialized, actionPath)
+    return MessageAction.unserializeObject(textutils.unserialize(serialized), actionPath)
+  end
+  
+  twf.actionpath.action.MessageAction = MessageAction
 end
