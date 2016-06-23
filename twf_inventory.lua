@@ -924,10 +924,15 @@ if not twf.inventory.Inventory then
     local result = {}
     
     while first or index ~= selectedSlot do 
-      local cachedItem = self.itemDetails[selectedSlot]
-      local turtleItem = twf.inventory.ItemDetail:safeNew(turtle.getItemDetail(selectedSlot))
+      first = false
+      local cachedItem = self.itemDetails[index]
+      local turtleItem = twf.inventory.ItemDetail:safeNew(turtle.getItemDetail(index))
       
-      self.itemDetails[selectedSlot] = turtleItem:clone()
+      if turtleItem then 
+        self.itemDetails[index] = turtleItem:clone()
+      else 
+        self.itemDetails[index] = nil
+      end
       
       if turtleItem then 
         local oldCount = 0
@@ -949,13 +954,15 @@ if not twf.inventory.Inventory then
           
           if not found then 
             result[#result + 1] = turtleItem:clone()
-            result[#result + 1].count = turtleItem.count - oldCount
+            result[#result].count = turtleItem.count - oldCount
           end
         end
       else
         -- The turtle will not attempt to fill stacks over empty slots
         return result
       end
+      
+      index = nextIndex(index)
     end
     
     return result

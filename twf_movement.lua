@@ -138,7 +138,7 @@ if not twf.movement.direction then
   -- Altering a direction with a relative direction
   
   -----------------------------------------------------------------------------
-  -- Returns the absolute direction that comes from going relDir in absDir. 
+  -- Returns the direction that comes from going relDir in dir. 
   --
   -- Usage:
   --   dofile('twf_movement.lua')
@@ -156,43 +156,55 @@ if not twf.movement.direction then
   --   -- prints south (+z)
   --   print(direction.toString(direction.alter(direction.NORTH, direction.BACK))
   --
-  -- @param absDir an absolute direction
+  -- @param dir    a direction
   -- @param relDir a relative direction
-  -- @return       an absolute direction (number) relDir of absDir
-  -- @error        if absDir is not a valid absolute direction
+  -- @return       a direction (number) relDir of dir
+  -- @error        if absDir is not a valid direction
   --               if relDir is not a valid relative direction
   -----------------------------------------------------------------------------
-  function direction.alter(absDir, relDir)
-    if not direction.isAbsolute(absDir) then 
-      error('Expected absDir to be absolute, but is ' .. direction.toString(absDir))
+  function direction.alter(dir, relDir)
+    if not direction.isDirection(dir) then 
+      error('Expected dir to be a direction, but is ' .. dir)
     end
     if not direction.isRelative(relDir) then
       error('Expected relDir to be relative, but is ' .. direction.toString(relDir))
     end
     
     if relDir == direction.CLOCKWISE then 
-      if     absDir == direction.NORTH then return direction.EAST
-      elseif absDir == direction.EAST  then return direction.SOUTH
-      elseif absDir == direction.SOUTH then return direction.WEST
-      elseif absDir == direction.WEST  then return direction.NORTH
-      elseif absDir == direction.UP    then return direction.UP
-      elseif absDir == direction.DOWN  then return direction.DOWN end
+      if     dir == direction.NORTH   then return direction.EAST
+      elseif dir == direction.EAST    then return direction.SOUTH
+      elseif dir == direction.SOUTH   then return direction.WEST
+      elseif dir == direction.WEST    then return direction.NORTH
+      elseif dir == direction.FORWARD then return direction.LEFT
+      elseif dir == direction.LEFT    then return direction.BACK
+      elseif dir == direction.BACK    then return direction.RIGHT
+      elseif dir == direction.RIGHT   then return direction.FORWARD
+      elseif dir == direction.UP      then return direction.UP
+      elseif dir == direction.DOWN    then return direction.DOWN end
     elseif relDir == direction.COUNTER_CLOCKWISE then
-      if     absDir == direction.NORTH then return direction.WEST
-      elseif absDir == direction.WEST  then return direction.SOUTH
-      elseif absDir == direction.SOUTH then return direction.EAST
-      elseif absDir == direction.EAST  then return direction.NORTH
-      elseif absDir == direction.UP    then return direction.UP
-      elseif absDir == direction.DOWN  then return direction.DOWN end
+      if     dir == direction.NORTH   then return direction.WEST
+      elseif dir == direction.WEST    then return direction.SOUTH
+      elseif dir == direction.SOUTH   then return direction.EAST
+      elseif dir == direction.EAST    then return direction.NORTH
+      elseif dir == direction.FORWARD then return direction.RIGHT
+      elseif dir == direction.RIGHT   then return direction.BACK
+      elseif dir == direction.BACK    then return direction.LEFT
+      elseif dir == direction.LEFT    then return direction.FORWARD
+      elseif dir == direction.UP      then return direction.UP
+      elseif dir == direction.DOWN    then return direction.DOWN end
     elseif relDir == direction.BACK then
-      if     absDir == direction.NORTH then return direction.SOUTH
-      elseif absDir == direction.SOUTH  then return direction.NORTH
-      elseif absDir == direction.WEST then return direction.EAST
-      elseif absDir == direction.EAST  then return direction.WEST
-      elseif absDir == direction.UP    then return direction.DOWN
-      elseif absDir == direction.DOWN  then return direction.UP end
+      if     dir == direction.NORTH   then return direction.SOUTH
+      elseif dir == direction.SOUTH   then return direction.NORTH
+      elseif dir == direction.WEST    then return direction.EAST
+      elseif dir == direction.EAST    then return direction.WEST
+      elseif dir == direction.FORWARD then return direction.BACK
+      elseif dir == direction.RIGHT   then return direction.LEFT
+      elseif dir == direction.BACK    then return direction.FORWARD
+      elseif dir == direction.LEFT    then return direction.RIGHT
+      elseif dir == direction.UP      then return direction.DOWN
+      elseif dir == direction.DOWN    then return direction.UP end
     elseif relDir == direction.FORWARD then
-      return absDir
+      return dir
     elseif relDir == direction.UP then
       return direction.UP
     elseif relDir == direction.DOWN then 
@@ -240,8 +252,8 @@ if not twf.movement.direction then
   end
   
   -----------------------------------------------------------------------------
-  -- Returns the absolute direction that comes from going in the opposite 
-  -- direction of the specified absolute direction.
+  -- Returns the direction that comes from going in the opposite 
+  -- direction of the specified direction.
   --
   -- Usage:
   --   dofile('twf_movement.lua')
@@ -250,12 +262,15 @@ if not twf.movement.direction then
   --   -- prints south (+z)
   --   print(direction.toString(direction.inverse(direction.NORTH)))
   -- 
-  -- @param dir an absolute direction
-  -- @return    the absolute direction (number) opposite of the specified 
+  -- @param dir a direction
+  -- @return    the direction (number) opposite of the specified 
   --            direction
-  -- @error     if dir is not a valid absolute direction
+  -- @error     if dir is not a valid direction
   -----------------------------------------------------------------------------
   function direction.inverse(dir)
+    if dir == direction.UP then return direction.DOWN 
+    elseif dir == direction.DOWN then return direction.UP end
+    
     return direction.alter(dir, direction.BACK)
   end
   
@@ -1708,7 +1723,7 @@ if not twf.movement.action then
     function MoveAction:serializableObject()
       local resultTable = {}
       
-      resultTable.direction = twf.movement.direction.serializeObject(self.direction)
+      resultTable.direction = twf.movement.direction.serializableObject(self.direction)
       
       return resultTable
     end

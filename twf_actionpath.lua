@@ -316,10 +316,10 @@ if not twf.actionpath.ActionPath then
   --   actPath:tick()
   -----------------------------------------------------------------------------
   function ActionPath:tick(stateTurtle)
-    local result = self.head:perform(stateTurtle, self)
+    local result = self.head:perform(stateTurtle, self.pathState)
     
     if result == twf.actionpath.ActionResult.SUCCESS then 
-      self.head:updateState(stateTurtle, self)
+      self.head:updateState(stateTurtle, self.pathState)
     end
   end
   
@@ -427,7 +427,7 @@ if not twf.actionpath.ActionPath then
     local resultTable = {}
     
     resultTable.head = self:serializableObjectForAction(self.head)
-    resultTable.pathState = pathState
+    resultTable.pathState = self.pathState
     
     return resultTable
   end
@@ -552,7 +552,8 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
     while true do 
       actionPath:tick(self)
       actionPath:saveToFile(actionPathRecoveryFile)
-      self:finishAction() -- See twf.actionpath.action.MoveAction before you touch this
+      self:saveToFile()
+      self:finishAction()
       
       -- Yielding here will make it slightly more likely to be 
       -- unloaded here, which is pretty much guarranteed to work
@@ -739,7 +740,13 @@ if not twf.actionpath.action.SequenceAction then
     resultTable.children = {}
     
     for i = 1, #self.children do 
-      resultTable.children[i] = actionPath:serializableObjectForAction(self.children[i])
+      local succ, err = pcall(function()
+        resultTable.children[i] = actionPath:serializableObjectForAction(self.children[i])
+      end)
+      
+      if not succ then 
+        error('Failed to serialize ' .. self.children[i].name() .. ': ' .. err)
+      end
     end
     
     resultTable.currentIndex = self.currentIndex
@@ -1246,31 +1253,31 @@ end
 -- Decorators
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.Inverter
+-- twf.actionpath.action.InverterAction
 --
 -- Inverts the result of the child - FAILURE -> SUCCESS, RUNNING -> RUNNING, 
 -- and SUCCESS -> FAILURE
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.Inverter then
-  local Inverter = {}
+if not twf.actionpath.action.InverterAction then
+  local InverterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this inverter
   -----------------------------------------------------------------------------
-  Inverter.child = nil
+  InverterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this Inverter
+  -- Creates a new instance of this InverterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Inverter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.InverterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function Inverter:new(o)
+  function InverterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self 
@@ -1288,7 +1295,7 @@ if not twf.actionpath.action.Inverter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.Inverter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.InverterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -1297,7 +1304,7 @@ if not twf.actionpath.action.Inverter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Inverter:perform(stateTurtle, pathState)
+  function InverterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
@@ -1317,7 +1324,7 @@ if not twf.actionpath.action.Inverter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function Inverter:updateState(stateTurtle, pathState)
+  function InverterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -1325,13 +1332,13 @@ if not twf.actionpath.action.Inverter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.Inverter
-  --   print(twf.actionpath.action.Inverter.name())
+  --   -- prints twf.actionpath.action.InverterAction
+  --   print(twf.actionpath.action.InverterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function Inverter.name()
-    return 'twf.actionpath.action.Inverter'
+  function InverterAction.name()
+    return 'twf.actionpath.action.InverterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -1339,14 +1346,14 @@ if not twf.actionpath.action.Inverter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Inverter:new()
+  --   local act = twf.actionpath.action.InverterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Inverter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.InverterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function Inverter:serializableObject(actionPath)
+  function InverterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -1359,18 +1366,18 @@ if not twf.actionpath.action.Inverter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Inverter:new()
+  --   local act = twf.actionpath.action.InverterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Inverter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.InverterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function Inverter.unserializeObject(serTable, actionPath)
+  function InverterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return Inverter:new({child = child})
+    return InverterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -1378,14 +1385,14 @@ if not twf.actionpath.action.Inverter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Inverter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.InverterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Inverter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.InverterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Inverter:serialize(actionPath)
+  function InverterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -1394,48 +1401,48 @@ if not twf.actionpath.action.Inverter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Inverter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.InverterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Inverter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.InverterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Inverter.unserialize(serialized, actionPath)
+  function InverterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return Inverter.unserializeObject(serTable, actionPath)
+    return InverterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.Inverter = Inverter
+  twf.actionpath.action.InverterAction = InverterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.Succeeder
+-- twf.actionpath.action.SucceederAction
 --
 -- Except for RUNNING which is unaffected, always returns SUCCESS
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.Succeeder then
-  local Succeeder = {}
+if not twf.actionpath.action.SucceederAction then
+  local SucceederAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this succeeder
   -----------------------------------------------------------------------------
-  Succeeder.child = nil
+  SucceederAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this Succeeder
+  -- Creates a new instance of this SucceederAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Succeeder:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SucceederAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function Succeeder:new(o)
+  function SucceederAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -1453,7 +1460,7 @@ if not twf.actionpath.action.Succeeder then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.Succeeder:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SucceederAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -1462,7 +1469,7 @@ if not twf.actionpath.action.Succeeder then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Succeeder:perform(stateTurtle, pathState)
+  function SucceederAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.RUNNING then 
@@ -1478,7 +1485,7 @@ if not twf.actionpath.action.Succeeder then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function Succeeder:updateState(stateTurtle, pathState)
+  function SucceederAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -1486,13 +1493,13 @@ if not twf.actionpath.action.Succeeder then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.Succeeder
-  --   print(twf.actionpath.action.Succeeder.name())
+  --   -- prints twf.actionpath.action.SucceederAction
+  --   print(twf.actionpath.action.SucceederAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function Succeeder.name()
-    return 'twf.actionpath.action.Succeeder'
+  function SucceederAction.name()
+    return 'twf.actionpath.action.SucceederAction'
   end
   
   -----------------------------------------------------------------------------
@@ -1500,14 +1507,14 @@ if not twf.actionpath.action.Succeeder then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Succeeder:new()
+  --   local act = twf.actionpath.action.SucceederAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Succeeder.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.SucceederAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function Succeeder:serializableObject(actionPath)
+  function SucceederAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -1520,18 +1527,18 @@ if not twf.actionpath.action.Succeeder then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Succeeder:new()
+  --   local act = twf.actionpath.action.SucceederAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Succeeder.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.SucceederAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function Succeeder.unserializeObject(serTable, actionPath)
+  function SucceederAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return Succeeder:new({child = child})
+    return SucceederAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -1539,14 +1546,14 @@ if not twf.actionpath.action.Succeeder then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Succeeder:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SucceederAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Succeeder.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.SucceederAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Succeeder:serialize(actionPath)
+  function SucceederAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -1555,48 +1562,48 @@ if not twf.actionpath.action.Succeeder then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Succeeder:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SucceederAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Succeeder.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.SucceederAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Succeeder.unserialize(serialized, actionPath)
+  function SucceederAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return Succeeder.unserializeObject(serTable, actionPath)
+    return SucceederAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.Succeeder = Succeeder
+  twf.actionpath.action.SucceederAction = SucceederAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.RepeatUntilFailure
+-- twf.actionpath.action.RepeatUntilFailureAction
 -- 
 -- Repeats the child action until it returns failure
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.RepeatUntilFailure then
-  local RepeatUntilFailure = {}
+if not twf.actionpath.action.RepeatUntilFailureAction then
+  local RepeatUntilFailureAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  RepeatUntilFailure.child = nil
+  RepeatUntilFailureAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this RepeatUntilFailure
+  -- Creates a new instance of this RepeatUntilFailureAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:new(o)
+  function RepeatUntilFailureAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -1615,7 +1622,7 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -1624,7 +1631,7 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:perform(stateTurtle, pathState)
+  function RepeatUntilFailureAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.RUNNING then 
@@ -1642,7 +1649,7 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:updateState(stateTurtle, pathState)
+  function RepeatUntilFailureAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -1650,13 +1657,13 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.RepeatUntilFailure
-  --   print(twf.actionpath.action.RepeatUntilFailure.name())
+  --   -- prints twf.actionpath.action.RepeatUntilFailureAction
+  --   print(twf.actionpath.action.RepeatUntilFailureAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure.name()
-    return 'twf.actionpath.action.RepeatUntilFailure'
+  function RepeatUntilFailureAction.name()
+    return 'twf.actionpath.action.RepeatUntilFailureAction'
   end
   
   -----------------------------------------------------------------------------
@@ -1664,14 +1671,14 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new()
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RepeatUntilFailureAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:serializableObject(actionPath)
+  function RepeatUntilFailureAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -1684,18 +1691,18 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new()
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RepeatUntilFailureAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure.unserializeObject(serTable, actionPath)
+  function RepeatUntilFailureAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return RepeatUntilFailure:new({child = child})
+    return RepeatUntilFailureAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -1703,14 +1710,14 @@ if not twf.actionpath.action.RepeatUntilFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RepeatUntilFailureAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure:serialize(actionPath)
+  function RepeatUntilFailureAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -1719,25 +1726,25 @@ if not twf.actionpath.action.RepeatUntilFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RepeatUntilFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeatUntilFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.RepeatUntilFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RepeatUntilFailureAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RepeatUntilFailure.unserialize(serialized, actionPath)
+  function RepeatUntilFailureAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return RepeatUntilFailure.unserializeObject(serTable, actionPath)
+    return RepeatUntilFailureAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.RepeatUntilFailure = RepeatUntilFailure
+  twf.actionpath.action.RepeatUntilFailureAction = RepeatUntilFailureAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.Repeater
+-- twf.actionpath.action.RepeaterAction
 -- 
 -- Repeats the child action either indefinitely or a maximum of some number 
 -- of times until the child returns FAILURE. Returns SUCCESS if it reaches
@@ -1747,35 +1754,35 @@ end
 -- The child returning RUNNING is not counted towards the maximum number of 
 -- times
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.Repeater then
-  local Repeater = {}
+if not twf.actionpath.action.RepeaterAction then
+  local RepeaterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  Repeater.child = nil
+  RepeaterAction.child = nil
   
   -----------------------------------------------------------------------------
   -- The number of times to repeat the action, nil for infinite times
   -----------------------------------------------------------------------------
-  Repeater.times = nil
+  RepeaterAction.times = nil
   
   -----------------------------------------------------------------------------
   -- The number of times the child action 
-  Repeater.counter = nil
+  RepeaterAction.counter = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this Repeater
+  -- Creates a new instance of this RepeaterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Repeater:new({child = some.action.ActionName:new(), times = 5})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.action.ActionName:new(), times = 5})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function Repeater:new(o)
+  function RepeaterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -1798,7 +1805,7 @@ if not twf.actionpath.action.Repeater then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.Repeater:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -1807,7 +1814,7 @@ if not twf.actionpath.action.Repeater then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function Repeater:perform(stateTurtle, pathState)
+  function RepeaterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
@@ -1835,7 +1842,7 @@ if not twf.actionpath.action.Repeater then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function Repeater:updateState(stateTurtle, pathState)
+  function RepeaterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -1843,13 +1850,13 @@ if not twf.actionpath.action.Repeater then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.Repeater
-  --   print(twf.actionpath.action.Repeater.name())
+  --   -- prints twf.actionpath.action.RepeaterAction
+  --   print(twf.actionpath.action.RepeaterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function Repeater.name()
-    return 'twf.actionpath.action.Repeater'
+  function RepeaterAction.name()
+    return 'twf.actionpath.action.RepeaterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -1857,14 +1864,14 @@ if not twf.actionpath.action.Repeater then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Repeater:new({child = some.child.Action:new(), times = 2})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.child.Action:new(), times = 2})
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Repeater.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RepeaterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function Repeater:serializableObject(actionPath)
+  function RepeaterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -1879,20 +1886,20 @@ if not twf.actionpath.action.Repeater then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Repeater:new({child = some.child.Action:new(), times = 2})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.child.Action:new(), times = 2})
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.Repeater.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RepeaterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function Repeater.unserializeObject(serTable, actionPath)
+  function RepeaterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     local times = serTable.times
     local counter = serTable.counter
     
-    return Repeater:new({child = child, times = times, counter = counter})
+    return RepeaterAction:new({child = child, times = times, counter = counter})
   end
   
   -----------------------------------------------------------------------------
@@ -1900,14 +1907,14 @@ if not twf.actionpath.action.Repeater then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Repeater:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Repeater.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RepeaterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Repeater:serialize(actionPath)
+  function RepeaterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -1916,56 +1923,60 @@ if not twf.actionpath.action.Repeater then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.Repeater:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RepeaterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.Repeater.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RepeaterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function Repeater.unserialize(serialized, actionPath)
+  function RepeaterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return RepeatUntilFailure.unserializeObject(serTable, actionPath)
+    return RepeatUntilFailureAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.Repeater = Repeater
+  twf.actionpath.action.RepeaterAction = RepeaterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.DieOnFailure
+-- twf.actionpath.action.DieOnFailureAction
 --
 -- Crash and burn if the child fails.
 --
 -- @remarks representative of skydiving
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.DieOnFailure then
-  local DieOnFailure = {}
+if not twf.actionpath.action.DieOnFailureAction then
+  local DieOnFailureAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  DieOnFailure.child = nil
+  DieOnFailureAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this DieOnFailure
+  -- Creates a new instance of this DieOnFailureAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DieOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DieOnFailureAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function DieOnFailure:new(o)
+  function DieOnFailureAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
     
     if type(o.child) ~= 'table' then 
       error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    if type(o.child.name) ~= 'function' then 
+      error('Expected o.child.name to be a function but is ' .. type(o.child.name))
     end
     
     return o
@@ -1978,7 +1989,7 @@ if not twf.actionpath.action.DieOnFailure then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.DieOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DieOnFailureAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -1988,7 +1999,7 @@ if not twf.actionpath.action.DieOnFailure then
   -- @return result of this action 
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
-  function DieOnFailure:perform(stateTurtle, pathState)
+  function DieOnFailureAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
@@ -1996,6 +2007,7 @@ if not twf.actionpath.action.DieOnFailure then
     elseif res == twf.actionpath.ActionResult.RUNNING then 
       return res
     else
+      if res == nil then res = 'nil' end
       error('World is coming to an end - my child returned ' .. res)
     end
   end
@@ -2006,7 +2018,7 @@ if not twf.actionpath.action.DieOnFailure then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function DieOnFailure:updateState(stateTurtle, pathState)
+  function DieOnFailureAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2014,13 +2026,13 @@ if not twf.actionpath.action.DieOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.DieOnFailure
-  --   print(twf.actionpath.action.DieOnFailure.name())
+  --   -- prints twf.actionpath.action.DieOnFailureAction
+  --   print(twf.actionpath.action.DieOnFailureAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function DieOnFailure.name()
-    return 'twf.actionpath.action.DieOnFailure'
+  function DieOnFailureAction.name()
+    return 'twf.actionpath.action.DieOnFailureAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2028,14 +2040,14 @@ if not twf.actionpath.action.DieOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DieOnFailure:new()
+  --   local act = twf.actionpath.action.DieOnFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DieOnFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DieOnFailureAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function DieOnFailure:serializableObject(actionPath)
+  function DieOnFailureAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2048,18 +2060,18 @@ if not twf.actionpath.action.DieOnFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DieOnFailure:new()
+  --   local act = twf.actionpath.action.DieOnFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DieOnFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DieOnFailureAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function DieOnFailure.unserializeObject(serTable, actionPath)
+  function DieOnFailureAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return DieOnFailure:new({child = child})
+    return DieOnFailureAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2067,14 +2079,14 @@ if not twf.actionpath.action.DieOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DieOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DieOnFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DieOnFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DieOnFailureAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DieOnFailure:serialize(actionPath)
+  function DieOnFailureAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2083,49 +2095,49 @@ if not twf.actionpath.action.DieOnFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DieOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DieOnFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DieOnFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DieOnFailureAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DieOnFailure.unserialize(serialized, actionPath)
+  function DieOnFailureAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return DieOnFailure.unserializeObject(serTable, actionPath)
+    return DieOnFailureAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.DieOnFailure = DieOnFailure
+  twf.actionpath.action.DieOnFailureAction = DieOnFailureAction
 end
 
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.RetryOnFailure
+-- twf.actionpath.action.RetryOnFailureAction
 --
 -- Try again if the child fails. Has a small delay before retrying
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.RetryOnFailure then
-  local RetryOnFailure = {}
+if not twf.actionpath.action.RetryOnFailureAction then
+  local RetryOnFailureAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  RetryOnFailure.child = nil
+  RetryOnFailureAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this RetryOnFailure
+  -- Creates a new instance of this RetryOnFailureAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RetryOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function RetryOnFailure:new(o)
+  function RetryOnFailureAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2144,7 +2156,7 @@ if not twf.actionpath.action.RetryOnFailure then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.RetryOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2154,7 +2166,7 @@ if not twf.actionpath.action.RetryOnFailure then
   -- @return result of this action 
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
-  function RetryOnFailure:perform(stateTurtle, pathState)
+  function RetryOnFailureAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
@@ -2175,7 +2187,7 @@ if not twf.actionpath.action.RetryOnFailure then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function RetryOnFailure:updateState(stateTurtle, pathState)
+  function RetryOnFailureAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2183,13 +2195,13 @@ if not twf.actionpath.action.RetryOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.RetryOnFailure
-  --   print(twf.actionpath.action.RetryOnFailure.name())
+  --   -- prints twf.actionpath.action.RetryOnFailureAction
+  --   print(twf.actionpath.action.RetryOnFailureAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function RetryOnFailure.name()
-    return 'twf.actionpath.action.RetryOnFailure'
+  function RetryOnFailureAction.name()
+    return 'twf.actionpath.action.RetryOnFailureAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2197,14 +2209,14 @@ if not twf.actionpath.action.RetryOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RetryOnFailure:new()
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.RetryOnFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RetryOnFailureAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function RetryOnFailure:serializableObject(actionPath)
+  function RetryOnFailureAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2217,18 +2229,18 @@ if not twf.actionpath.action.RetryOnFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RetryOnFailure:new()
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.RetryOnFailure.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.RetryOnFailureAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function RetryOnFailure.unserializeObject(serTable, actionPath)
+  function RetryOnFailureAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return RetryOnFailure:new({child = child})
+    return RetryOnFailureAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2236,14 +2248,14 @@ if not twf.actionpath.action.RetryOnFailure then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RetryOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.RetryOnFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RetryOnFailureAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RetryOnFailure:serialize(actionPath)
+  function RetryOnFailureAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2252,50 +2264,50 @@ if not twf.actionpath.action.RetryOnFailure then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.RetryOnFailure:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.RetryOnFailureAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.RetryOnFailure.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.RetryOnFailureAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function RetryOnFailure.unserialize(serialized, actionPath)
+  function RetryOnFailureAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return RetryOnFailure.unserializeObject(serTable, actionPath)
+    return RetryOnFailureAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.RetryOnFailure = RetryOnFailure
+  twf.actionpath.action.RetryOnFailureAction = RetryOnFailureAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.MoveResultInterpreter
+-- twf.actionpath.action.MoveResultInterpreterAction
 --
 -- Returns success if the child action returns a successful move result - 
 -- managing the interaction between actionpaths twf.movement.action.Action 
 -- style classes.
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.MoveResultInterpreter then
-  local MoveResultInterpreter = {}
+if not twf.actionpath.action.MoveResultInterpreterAction then
+  local MoveResultInterpreterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  MoveResultInterpreter.child = nil
+  MoveResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this MoveResultInterpreter
+  -- Creates a new instance of this MoveResultInterpreterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:new(o)
+  function MoveResultInterpreterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2314,7 +2326,7 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2323,7 +2335,7 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:perform(stateTurtle, pathState)
+  function MoveResultInterpreterAction:perform(stateTurtle, pathState)
     if fs.exists(stateTurtle.actionRecoveryFile) then 
       local moved = stateTurtle:recoverAction()
       if moved then 
@@ -2347,7 +2359,7 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:updateState(stateTurtle, pathState)
+  function MoveResultInterpreterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2355,13 +2367,13 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.MoveResultInterpreter
-  --   print(twf.actionpath.action.MoveResultInterpreter.name())
+  --   -- prints twf.actionpath.action.MoveResultInterpreterAction
+  --   print(twf.actionpath.action.MoveResultInterpreterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter.name()
-    return 'twf.actionpath.action.MoveResultInterpreter'
+  function MoveResultInterpreterAction.name()
+    return 'twf.actionpath.action.MoveResultInterpreterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2369,14 +2381,14 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new()
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.MoveResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:serializableObject(actionPath)
+  function MoveResultInterpreterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2389,18 +2401,18 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new()
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.MoveResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter.unserializeObject(serTable, actionPath)
+  function MoveResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return MoveResultInterpreter:new({child = child})
+    return MoveResultInterpreterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2408,14 +2420,14 @@ if not twf.actionpath.action.MoveResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.MoveResultInterpreterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter:serialize(actionPath)
+  function MoveResultInterpreterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2424,48 +2436,48 @@ if not twf.actionpath.action.MoveResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.MoveResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.MoveResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.MoveResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.MoveResultInterpreterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function MoveResultInterpreter.unserialize(serialized, actionPath)
+  function MoveResultInterpreterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return MoveResultInterpreter.unserializeObject(serTable, actionPath)
+    return MoveResultInterpreterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.MoveResultInterpreter = MoveResultInterpreter
+  twf.actionpath.action.MoveResultInterpreterAction = MoveResultInterpreterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.DigResultInterpreter
+-- twf.actionpath.action.DigResultInterpreterAction
 --
 -- Returns success if the child action returns a successful dig result
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.DigResultInterpreter then
-  local DigResultInterpreter = {}
+if not twf.actionpath.action.DigResultInterpreterAction then
+  local DigResultInterpreterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  DigResultInterpreter.child = nil
+  DigResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this DigResultInterpreter
+  -- Creates a new instance of this DigResultInterpreterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:new(o)
+  function DigResultInterpreterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2484,7 +2496,7 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2493,7 +2505,7 @@ if not twf.actionpath.action.DigResultInterpreter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:perform(stateTurtle, pathState)
+  function DigResultInterpreterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if twf.inventory.DigResult.isSuccess(res) then 
@@ -2509,7 +2521,7 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:updateState(stateTurtle, pathState)
+  function DigResultInterpreterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2517,13 +2529,13 @@ if not twf.actionpath.action.DigResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.DigResultInterpreter
-  --   print(twf.actionpath.action.DigResultInterpreter.name())
+  --   -- prints twf.actionpath.action.DigResultInterpreterAction
+  --   print(twf.actionpath.action.DigResultInterpreterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function DigResultInterpreter.name()
-    return 'twf.actionpath.action.DigResultInterpreter'
+  function DigResultInterpreterAction.name()
+    return 'twf.actionpath.action.DigResultInterpreterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2531,14 +2543,14 @@ if not twf.actionpath.action.DigResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DigResultInterpreter:new()
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DigResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:serializableObject(actionPath)
+  function DigResultInterpreterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2551,18 +2563,18 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DigResultInterpreter:new()
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DigResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter.unserializeObject(serTable, actionPath)
+  function DigResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return DigResultInterpreter:new({child = child})
+    return DigResultInterpreterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2570,14 +2582,14 @@ if not twf.actionpath.action.DigResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DigResultInterpreterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter:serialize(actionPath)
+  function DigResultInterpreterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2586,48 +2598,48 @@ if not twf.actionpath.action.DigResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DigResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DigResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DigResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DigResultInterpreterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DigResultInterpreter.unserialize(serialized, actionPath)
+  function DigResultInterpreterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return DigResultInterpreter.unserializeObject(serTable, actionPath)
+    return DigResultInterpreterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.DigResultInterpreter = DigResultInterpreter
+  twf.actionpath.action.DigResultInterpreterAction = DigResultInterpreterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.PlaceResultInterpreter
+-- twf.actionpath.action.PlaceResultInterpreterAction
 --
 -- Returns success if the child action returns a successful place result
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.PlaceResultInterpreter then
-  local PlaceResultInterpreter = {}
+if not twf.actionpath.action.PlaceResultInterpreterAction then
+  local PlaceResultInterpreterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  PlaceResultInterpreter.child = nil
+  PlaceResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this PlaceResultInterpreter
+  -- Creates a new instance of this PlaceResultInterpreterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:new(o)
+  function PlaceResultInterpreterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2646,7 +2658,7 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2655,7 +2667,7 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:perform(stateTurtle, pathState)
+  function PlaceResultInterpreterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if twf.inventory.PlaceResult.isSuccess(res) then 
@@ -2671,7 +2683,7 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:updateState(stateTurtle, pathState)
+  function PlaceResultInterpreterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2679,13 +2691,13 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.PlaceResultInterpreter
-  --   print(twf.actionpath.action.PlaceResultInterpreter.name())
+  --   -- prints twf.actionpath.action.PlaceResultInterpreterAction
+  --   print(twf.actionpath.action.PlaceResultInterpreterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter.name()
-    return 'twf.actionpath.action.PlaceResultInterpreter'
+  function PlaceResultInterpreterAction.name()
+    return 'twf.actionpath.action.PlaceResultInterpreterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2693,14 +2705,14 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new()
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:serializableObject(actionPath)
+  function PlaceResultInterpreterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2713,18 +2725,18 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new()
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter.unserializeObject(serTable, actionPath)
+  function PlaceResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return PlaceResultInterpreter:new({child = child})
+    return PlaceResultInterpreterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2732,14 +2744,14 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter:serialize(actionPath)
+  function PlaceResultInterpreterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2748,48 +2760,48 @@ if not twf.actionpath.action.PlaceResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.PlaceResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.PlaceResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.PlaceResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.PlaceResultInterpreterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function PlaceResultInterpreter.unserialize(serialized, actionPath)
+  function PlaceResultInterpreterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return PlaceResultInterpreter.unserializeObject(serTable, actionPath)
+    return PlaceResultInterpreterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.PlaceResultInterpreter = PlaceResultInterpreter
+  twf.actionpath.action.PlaceResultInterpreterAction = PlaceResultInterpreterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.DropResultInterpreter
+-- twf.actionpath.action.DropResultInterpreterAction
 --
 -- Returns success if the child action returns a successful drop result
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.DropResultInterpreter then
-  local DropResultInterpreter = {}
+if not twf.actionpath.action.DropResultInterpreterAction then
+  local DropResultInterpreterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  DropResultInterpreter.child = nil
+  DropResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this DropResultInterpreter
+  -- Creates a new instance of this DropResultInterpreterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:new(o)
+  function DropResultInterpreterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2808,7 +2820,7 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2817,7 +2829,7 @@ if not twf.actionpath.action.DropResultInterpreter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:perform(stateTurtle, pathState)
+  function DropResultInterpreterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurle, pathState)
     
     if twf.inventory.DropResult.isSuccess(res) then 
@@ -2833,7 +2845,7 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:updateState(stateTurtle, pathState)
+  function DropResultInterpreterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -2841,13 +2853,13 @@ if not twf.actionpath.action.DropResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.DropResultInterpreter
-  --   print(twf.actionpath.action.DropResultInterpreter.name())
+  --   -- prints twf.actionpath.action.DropResultInterpreterAction
+  --   print(twf.actionpath.action.DropResultInterpreterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function DropResultInterpreter.name()
-    return 'twf.actionpath.action.DropResultInterpreter'
+  function DropResultInterpreterAction.name()
+    return 'twf.actionpath.action.DropResultInterpreterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -2855,14 +2867,14 @@ if not twf.actionpath.action.DropResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DropResultInterpreter:new()
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DropResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:serializableObject(actionPath)
+  function DropResultInterpreterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -2875,18 +2887,18 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DropResultInterpreter:new()
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.DropResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter.unserializeObject(serTable, actionPath)
+  function DropResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return DropResultInterpreter:new({child = child})
+    return DropResultInterpreterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -2894,14 +2906,14 @@ if not twf.actionpath.action.DropResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DropResultInterpreterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter:serialize(actionPath)
+  function DropResultInterpreterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -2910,48 +2922,48 @@ if not twf.actionpath.action.DropResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.DropResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.DropResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.DropResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.DropResultInterpreterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function DropResultInterpreter.unserialize(serialized, actionPath)
+  function DropResultInterpreterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return DropResultInterpreter.unserializeObject(serTable, actionPath)
+    return DropResultInterpreterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.DropResultInterpreter = DropResultInterpreter
+  twf.actionpath.action.DropResultInterpreterAction = DropResultInterpreterAction
 end
 
 -----------------------------------------------------------------------------
--- twf.actionpath.action.SuckResultInterpreter
+-- twf.actionpath.action.SuckResultInterpreterAction
 --
 -- Returns success if the child action returns a successful suck result
 -----------------------------------------------------------------------------
-if not twf.actionpath.action.SuckResultInterpreter then
-  local SuckResultInterpreter = {}
+if not twf.actionpath.action.SuckResultInterpreterAction then
+  local SuckResultInterpreterAction = {}
   
   -----------------------------------------------------------------------------
   -- The child of this action
   -----------------------------------------------------------------------------
-  SuckResultInterpreter.child = nil
+  SuckResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
-  -- Creates a new instance of this SuckResultInterpreter
+  -- Creates a new instance of this SuckResultInterpreterAction
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new({child = some.action.ActionName:new()})
   --
   -- @param o superseding object
   -- @return  a new instance of this action
   -- @error   if o.child is nil
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:new(o)
+  function SuckResultInterpreterAction:new(o)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -2970,7 +2982,7 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local st = twf.movement.StatefulTurtle:new()
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local res = act:perform(st, {})
   --
   -- @param stateTurtle StatefulTurtle
@@ -2979,7 +2991,7 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --                    break serialization with textutils.serialize
   -- @return result of this action 
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:perform(stateTurtle, pathState)
+  function SuckResultInterpreterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
     if twf.inventory.SuckResult.isSuccess(res) then 
@@ -2995,7 +3007,7 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- @param stateTurtle the state turtle to update
   -- @param pathState   the path state
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:updateState(stateTurtle, pathState)
+  function SuckResultInterpreterAction:updateState(stateTurtle, pathState)
   end
   
   -----------------------------------------------------------------------------
@@ -3003,13 +3015,13 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   -- prints twf.actionpath.action.SuckResultInterpreter
-  --   print(twf.actionpath.action.SuckResultInterpreter.name())
+  --   -- prints twf.actionpath.action.SuckResultInterpreterAction
+  --   print(twf.actionpath.action.SuckResultInterpreterAction.name())
   --
   -- @return a unique name for this type of action.
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter.name()
-    return 'twf.actionpath.action.SuckResultInterpreter'
+  function SuckResultInterpreterAction.name()
+    return 'twf.actionpath.action.SuckResultInterpreterAction'
   end
   
   -----------------------------------------------------------------------------
@@ -3017,14 +3029,14 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new()
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.SuckResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param actionPath the action path, used for serializing children
   -- @return           string serialization of this action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:serializableObject(actionPath)
+  function SuckResultInterpreterAction:serializableObject(actionPath)
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
@@ -3037,18 +3049,18 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new()
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new()
   --   local serialized = act:serializableObject(actPath)
-  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserializeObject(serialized)
+  --   local unserialized = twf.actionpath.action.SuckResultInterpreterAction.unserializeObject(serialized)
   --
   -- @param serTable the serialized object
   -- @param actionPath the action path 
   -- @return serialized action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter.unserializeObject(serTable, actionPath)
+  function SuckResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
     
-    return SuckResultInterpreter:new({child = child})
+    return SuckResultInterpreterAction:new({child = child})
   end
   
   -----------------------------------------------------------------------------
@@ -3056,14 +3068,14 @@ if not twf.actionpath.action.SuckResultInterpreter then
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.SuckResultInterpreterAction.unserialize(serialized)
   --
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter:serialize(actionPath)
+  function SuckResultInterpreterAction:serialize(actionPath)
     return textutils.serialize(self:serializableObject())
   end
   
@@ -3072,21 +3084,21 @@ if not twf.actionpath.action.SuckResultInterpreter then
   -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
-  --   local act = twf.actionpath.action.SuckResultInterpreter:new({child = some.action.ActionName:new()})
+  --   local act = twf.actionpath.action.SuckResultInterpreterAction:new({child = some.action.ActionName:new()})
   --   local serialized = act:serialize(actPath)
-  --   local unserialized = twf.actionpath.action.SuckResultInterpreter.unserialize(serialized)
+  --   local unserialized = twf.actionpath.action.SuckResultInterpreterAction.unserialize(serialized)
   --
   -- @param serialized the serialized string
   -- @param actionPath the action path
   -- @return string serialization of this action
   -----------------------------------------------------------------------------
-  function SuckResultInterpreter.unserialize(serialized, actionPath)
+  function SuckResultInterpreterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return SuckResultInterpreter.unserializeObject(serTable, actionPath)
+    return SuckResultInterpreterAction.unserializeObject(serTable, actionPath)
   end
   
-  twf.actionpath.action.SuckResultInterpreter = SuckResultInterpreter
+  twf.actionpath.action.SuckResultInterpreterAction = SuckResultInterpreterAction
 end
 
 -- Leafs
@@ -4283,4 +4295,380 @@ if not twf.actionpath.action.DropAction then
   end
   
   twf.actionpath.action.DropAction = DropAction
+end
+
+-----------------------------------------------------------------------------
+-- twf.actionpath.action.CounterAction
+-- 
+-- Performs actions on counters. Allows for simply loops. Counters are
+-- treated like 0 if they are not set
+-----------------------------------------------------------------------------
+if not twf.actionpath.action.CounterAction then
+  local CounterAction = {}
+  
+  -----------------------------------------------------------------------------
+  -- The id of the counter. 
+  -----------------------------------------------------------------------------
+  CounterAction.id = nil
+  
+  -----------------------------------------------------------------------------
+  -- The number to compare with
+  -----------------------------------------------------------------------------
+  CounterAction.number = nil
+  
+  -----------------------------------------------------------------------------
+  -- The method used to compare. Any of:
+  --   'equals'      - success on the counter being equal to the number
+  --   'greaterThan' - success on the counter being strictly greater than the number
+  --   'lessThan'    - success on the counter being strictly less than the number
+  --   'set'         - sets the counter to this number
+  --   'add'         - adds to the counter by this number. 
+  -----------------------------------------------------------------------------
+  CounterAction.actionType = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new instance of this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.CounterAction:new({id = 'my_counter', number = 1, actionType = 'add' })
+  --
+  -- @param o superseding object
+  -- @return  a new instance of this action
+  -----------------------------------------------------------------------------
+  function CounterAction:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.id) ~= 'string' then 
+      error('Expected o.id to be a string, but it is ' .. type(o.id))
+    end
+    
+    if type(o.number) ~= 'number' then 
+      error('Expected o.number to be a number, but it is ' .. type(o.id))
+    end
+    
+    if type(o.actionType) ~= 'string' then 
+      error('Expected o.actionType to be a string, but it is ' .. type(o.actionType))
+    end
+    
+    local actionTypeValid =              o.actionType == 'equals'
+    actionTypeValid = actionTypeValid or o.actionType == 'greaterThan'
+    actionTypeValid = actionTypeValid or o.actionType == 'lessThan'
+    actionTypeValid = actionTypeValid or o.actionType == 'set'
+    actionTypeValid = actionTypeValid or o.actionType == 'add'
+    
+    if not actionTypeValid then 
+      error('Expected o.actionType to be \'equals\', \'greaterThan\', \'lessThan\', \'set\', or \'add\' but is \'' .. o.actionType .. '\'')
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Performs this action. Always returns success
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.CounterAction:new({id = 'my_counter'})
+  --   local res = act:perform(st, {})
+  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -----------------------------------------------------------------------------
+  function CounterAction:perform(stateTurtle, pathState)
+    if not pathState.counters then 
+      pathState.counters = {}
+    end
+    
+    if pathState.counters[self.id] == nil then 
+      pathState.counters[self.id] = 0 
+    end
+    
+    if self.actionType == 'equals' then 
+      if pathState.counters[self.id] == self.number then 
+        return twf.actionpath.ActionResult.SUCCESS
+      else 
+        return twf.actionpath.ActionResult.FAILURE
+      end
+    elseif self.actionType == 'greaterThan' then 
+      if pathState.counters[self.id] > self.number then 
+        return twf.actionpath.ActionResult.SUCCESS
+      else 
+        return twf.actionpath.ActionResult.FAILURE
+      end
+    elseif self.actionType == 'lessThan' then 
+      if pathState.counters[self.id] == self.number then 
+        return twf.actionpath.ActionResult.SUCCESS
+      else 
+        return twf.actionpath.ActionResult.FAILURE
+      end
+    elseif self.actionType == 'set' then 
+      pathState.counters[self.id] = self.number
+      
+      return twf.actionpath.ActionResult.SUCCESS
+    elseif self.actionType == 'add' then 
+      pathState.counters[self.id] = pathState.counters[self.id] + self.number
+      
+      return twf.actionpath.ActionResult.SUCCESS
+    else 
+      error('Unexpected action type in CounterAction:perform!')
+    end
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unused
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function CounterAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.CounterAction
+  --   print(twf.actionpath.action.CounterAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function CounterAction.name()
+    return 'twf.actionpath.action.CounterAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.CounterAction:new({id = 'my_counter', actionType = 'set', number = 64})
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.CounterAction.unserializeObject(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function CounterAction:serializableObject(actionPath)
+    local resultTable = {}
+    
+    resultTable.id = self.id 
+    resultTable.actionType = self.actionType
+    resultTable.number = self.number
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serializableObject
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.Action:new()
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.Action.unserializeObject(serialized)
+  --
+  -- @param serialized the serialized object
+  -- @param actionPath the action path 
+  -- @return serialized action
+  -----------------------------------------------------------------------------
+  function CounterAction.unserializeObject(serialized, actionPath)
+    local id = serialized.id
+    local actionType = serialized.actionType
+    local number = serialized.number
+    
+    return CounterAction:new({id = id, actionType = actionType, number = number})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.CounterAction:new({id = 'my_counter', actionType = 'add', number = 1})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.Action.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function CounterAction:serialize(actionPath)
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.CounterAction:new({id = 'my_counter', actionType = 'add', number = 1})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.CounterAction.unserialize(serialized, actPath)
+  --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function CounterAction.unserialize(serialized, actionPath)
+    return CounterAction.unserializeObject(textutils.unserialize(serialized), actionPath)
+  end
+  
+  twf.actionpath.action.CounterAction = CounterAction
+end
+
+if not twf.actionpath.action.DieAction then
+  local DieAction = {}
+  
+  -----------------------------------------------------------------------------
+  -- The message to display 
+  -----------------------------------------------------------------------------
+  DieAction.message = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new instance of this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.DieAction:new()
+  --
+  -- @param o superseding object
+  -- @return  a new instance of this action
+  -----------------------------------------------------------------------------
+  function DieAction:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if not o.message then 
+      o.message = 'DieAction reached'
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Performs this action. Never returns
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.DieAction:new({id = 'my_counter'})
+  --   local res = act:perform(st, {})
+  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -- @error always
+  -----------------------------------------------------------------------------
+  function DieAction:perform(stateTurtle, pathState)
+    error(self.message)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unused
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function DieAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.DieAction
+  --   print(twf.actionpath.action.DieAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function DieAction.name()
+    return 'twf.actionpath.action.DieAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.DieAction:new()
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.DieAction.unserializeObject(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function DieAction:serializableObject(actionPath)
+    local resultTable = {}
+    
+    resultTable.message = self.message
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serializableObject
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.DieAction:new()
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.DieAction.unserializeObject(serialized)
+  --
+  -- @param serialized the serialized object
+  -- @param actionPath the action path 
+  -- @return serialized action
+  -----------------------------------------------------------------------------
+  function DieAction.unserializeObject(serialized, actionPath)
+    local message = serialized.message
+    
+    return DieAction:new({message = message})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.DieAction:new()
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.DieAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function DieAction:serialize(actionPath)
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.DieAction:new()
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.DieAction.unserialize(serialized, actPath)
+  --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function DieAction.unserialize(serialized, actionPath)
+    return DieAction.unserializeObject(textutils.unserialize(serialized), actionPath)
+  end
+  
+  twf.actionpath.action.DieAction = DieAction
 end

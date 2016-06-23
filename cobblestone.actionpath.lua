@@ -9,9 +9,9 @@ twf.actionpath.ActionPath:new({
             slots = { 16 },
             countCheck = 'exact'
           }),
-          twf.actionpath.action.Repeater:new({
-            child = twf.actionpath.action.DieOnFailure:new({
-              child = twf.actionpath.action.MoveResultInterpreter:new({
+          twf.actionpath.action.RepeaterAction:new({
+            child = twf.actionpath.action.DieOnFailureAction:new({
+              child = twf.actionpath.action.MoveResultInterpreterAction:new({
                 child = twf.movement.action.TurnAction:new({
                   direction = twf.movement.direction.RIGHT
                 })
@@ -24,9 +24,9 @@ twf.actionpath.ActionPath:new({
               dropBy = 'all', direction = twf.movement.direction.FORWARD
             })
           }),
-          twf.actionpath.action.Repeater:new({
-            child = twf.actionpath.action.DieOnFailure:new({
-              child = twf.actionpath.action.MoveResultInterpreter:new({
+          twf.actionpath.action.RepeaterAction:new({
+            child = twf.actionpath.action.DieOnFailureAction:new({
+              child = twf.actionpath.action.MoveResultInterpreterAction:new({
                 child = twf.movement.action.TurnAction:new({
                   direction = twf.movement.direction.RIGHT
                 })
@@ -36,7 +36,7 @@ twf.actionpath.ActionPath:new({
           })
         }
       }),
-      twf.actionpath.action.Succeeder:new({
+      twf.actionpath.action.SucceederAction:new({
         child = twf.inventory.action.DigAction:new({
           direction = twf.movement.direction.FORWARD
         })
