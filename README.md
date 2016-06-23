@@ -10,6 +10,10 @@ When the turtle is unloaded, it acts as if power was just cut-off. If the turtle
 
 This API provides action paths, which when used correctly, "hide" this issue of persistance, such that the programmer can normally assume that the program will always run to completion.
 
+## Gotchas
+
+This whole library depends on a modification to the base mod that makes turning use fuel. The reason for this can be seen via [this](https://github.com/dan200/ComputerCraft/issues/110) issue. While I cannot distribute the modified version, I can tell you it's *extremely* straight-forward if you use a java decompiler. The one I used is available at http://jd.benow.ca/
+
 ## Usage
 
 The library really shines with the use of action paths, however each file in the library indicates some modularity. For example, it's possible to only use the movement api, without the inventory or actonpath extensions. The reverse is not possible, since the inventory and actionpath modules incorporate the movement api. In order to use those libraries directly, it is recommended that you refer to the code.
