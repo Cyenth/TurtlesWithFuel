@@ -314,6 +314,9 @@ if not twf.actionpath.ActionPath then
   --   actPath:registerActions(twf.actionpath.action)
   --   actPath:loadFromFile('my_prog.actionpath')
   --   actPath:tick()
+  -- 
+  -- @param stateTurtle the stateful turtle
+  -- @return result of head action
   -----------------------------------------------------------------------------
   function ActionPath:tick(stateTurtle)
     local result = self.head:perform(stateTurtle, self.pathState)
@@ -321,6 +324,8 @@ if not twf.actionpath.ActionPath then
     if result == twf.actionpath.ActionResult.SUCCESS then 
       self.head:updateState(stateTurtle, self.pathState)
     end
+    
+    return result
   end
   
   -----------------------------------------------------------------------------
@@ -549,7 +554,7 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
     -- Good luck to 'em!
     
     while true do 
-      actionPath:tick(self)
+      local res = actionPath:tick(self)
       actionPath:saveToFile(actionPathRecoveryFile)
       self:saveToFile()
       self:finishAction()
@@ -559,7 +564,10 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
       os.queueEvent("twfFakeEventName")
       os.pullEvent("twfFakeEventName")
       
-      if not repeatForever then break end
+      if res ~= twf.actionpath.ActionResult.RUNNING then 
+        print('res = ' .. res)
+        if not repeatForever then return end
+      end
     end
   end
   
@@ -698,6 +706,8 @@ if not twf.actionpath.action.SequenceAction then
       self.currentIndex = 1
       return res
     end
+    
+    error('Should not get here (res = ' .. res .. ')')
   end
   
   -----------------------------------------------------------------------------
@@ -2468,6 +2478,11 @@ if not twf.actionpath.action.DigResultInterpreterAction then
   DigResultInterpreterAction.child = nil
   
   -----------------------------------------------------------------------------
+  -- If no block is detected, the action is considered successful. Default true
+  -----------------------------------------------------------------------------
+  DigResultInterpreterAction.noBlockIsSuccess = nil
+  
+  -----------------------------------------------------------------------------
   -- Creates a new instance of this DigResultInterpreterAction
   --
   -- Usage:
@@ -2485,6 +2500,10 @@ if not twf.actionpath.action.DigResultInterpreterAction then
     
     if type(o.child) ~= 'table' then 
       error('Expected o.child to be a table (for an Action) but is ' .. type(o.child))
+    end
+    
+    if o.noBlockIsSuccess == nil then 
+      o.noBlockIsSuccess = true
     end
     
     return o
@@ -2509,9 +2528,11 @@ if not twf.actionpath.action.DigResultInterpreterAction then
   function DigResultInterpreterAction:perform(stateTurtle, pathState)
     local res = self.child:perform(stateTurtle, pathState)
     
-    if twf.inventory.DigResult.isSuccess(res) then 
+    if res == twf.inventory.DigResult.DIG_SUCCESS then 
       return twf.actionpath.ActionResult.SUCCESS
-    else 
+    elseif self.noBlockIsSuccess and res == twf.inventory.DigResult.NOTHING_TO_DIG then 
+      return twf.actionpath.ActionResult.SUCCESS
+    else
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -2555,6 +2576,7 @@ if not twf.actionpath.action.DigResultInterpreterAction then
     local resultTable = {}
     
     resultTable.child = actionPath:serializableObjectForAction(self.child)
+    resultTable.noBlockIsSuccess = self.noBlockIsSuccess
     
     return resultTable
   end
@@ -2574,8 +2596,9 @@ if not twf.actionpath.action.DigResultInterpreterAction then
   -----------------------------------------------------------------------------
   function DigResultInterpreterAction.unserializeObject(serTable, actionPath)
     local child = actionPath:unserializeObjectOfAction(serTable.child)
+    local noBlockIsSuccess = serTable.noBlockIsSuccess
     
-    return DigResultInterpreterAction:new({child = child})
+    return DigResultInterpreterAction:new({child = child, noBlockIsSuccess = noBlockIsSuccess})
   end
   
   -----------------------------------------------------------------------------
@@ -4717,7 +4740,7 @@ if not twf.actionpath.action.MessageAction then
   end
   
   -----------------------------------------------------------------------------
-  -- Performs this action. Never returns
+  -- Performs this action. Returns success
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
@@ -4735,6 +4758,8 @@ if not twf.actionpath.action.MessageAction then
   -----------------------------------------------------------------------------
   function MessageAction:perform(stateTurtle, pathState)
     print(self.message)
+    
+    return twf.actionpath.ActionResult.SUCCESS
   end
   
   -----------------------------------------------------------------------------

@@ -19,6 +19,7 @@ local FuelCheck = twf.actionpath.action.FuelCheckAction
 local InventoryCheck = twf.actionpath.action.InventoryCheckAction
 local MoveResultInterpreter = twf.actionpath.action.MoveResultInterpreterAction
 local Inverter = twf.actionpath.action.InverterAction
+local Message = twf.actionpath.action.MessageAction
 
 local DigVein = twf.ores.action.DigVeinAction
 
@@ -76,6 +77,6 @@ twf.actionpath.ActionPath:new({
         }})
       })
     }),
-    Die:new({message = 'done'})
+    Message:new({message = 'Done!'})
   }})
 }):saveToFile('verticalmine.actionpath')

@@ -1,0 +1,11 @@
+dofile('verticalmine.actionpath.lua')
+
+fs.delete('turtle_state.dat')
+fs.delete('turtle_state_action_recovery.dat')
+fs.delete('verticalmine_recovery.dat')
+
+local file = fs.open('startup', 'w')
+file.write('dofile(\'verticalmine.lua\')')
+file.close()
+
+dofile('verticalmine.lua')

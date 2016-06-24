@@ -21,6 +21,10 @@ if not twf.ores.action then twf.ores.action = {} end
 -----------------------------------------------------------------------------
 if not twf.ores.DEFAULT_BLACKLIST then 
   twf.ores.DEFAULT_BLACKLIST = {
+    'minecraft:flowing_water',
+    'minecraft:water',
+    'minecraft:flowing_lava',
+    'minecraft:lava',
     'minecraft:cobblestone',
     'minecraft:stone',
     'minecraft:dirt',
@@ -568,6 +572,18 @@ do
       local MRI = twf.actionpath.action.MoveResultInterpreterAction
       local DRI = twf.actionpath.action.DigResultInterpreterAction
       
+      local digThenMove = function(dir) 
+        local res = twf.actionpath.action.SequenceAction:new({children = {
+          twf.actionpath.action.SucceederAction:new({child = 
+            twf.actionpath.action.RepeatUntilFailureAction:new({child =
+              DRI:new({child = DigAction:new({direction = dir}), noBlockIsSuccess = false})
+            })
+          }),
+          MRI:new({child = MoveAction:new({direction = dir})})
+        }})
+        return res
+      end
+      
       --[[ 13 ]] table.insert(digVeinAction.moveStack, MRI:new({child = MoveAction:new({direction = twf.movement.direction.inverse(self.direction)})}))
       --[[ 12 ]] table.insert(digVeinAction.moveStack, MRI:new({child = TurnAction:new({direction = left})}))
       --[[ 11 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = forward}))
@@ -579,8 +595,7 @@ do
       --[[  5 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = down}))
       --[[  4 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = up}))
       --[[  3 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = forward}))
-      --[[  2 ]] table.insert(digVeinAction.moveStack, MRI:new({child = MoveAction:new({direction = self.direction})}))
-      --[[  1 ]] table.insert(digVeinAction.moveStack, DRI:new({child = DigAction:new({direction = self.direction})}))
+      --[[2|1 ]] table.insert(digVeinAction.moveStack, digThenMove(self.direction))
       
       return twf.actionpath.ActionResult.SUCCESS
     end
@@ -792,15 +807,15 @@ if not twf.ores.action.DigVeinAction then
       return twf.actionpath.ActionResult.SUCCESS
     end
     
-    local pop = table.remove(self.moveStack)
-    
-    local result = pop:perform(stateTurtle, pathState, self)
-    
+    local act = table.remove(self.moveStack)
+    local result = act:perform(stateTurtle, pathState, self)
     if result == twf.actionpath.ActionResult.SUCCESS then 
       return twf.actionpath.ActionResult.RUNNING 
     elseif result == twf.actionpath.ActionResult.RUNNING then 
+      table.insert(self.moveStack, act)
       return result
     elseif result == twf.actionpath.ActionResult.FAILURE then
+      table.insert(self.moveStack, act) -- this should never happen, and probably indicates we're about to die
       return result
     end
     

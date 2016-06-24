@@ -53,9 +53,9 @@ Up to the preference of the programmer, it is often helpful to "import" specific
 
 Depending on the action path, there are *many* different ways this might want to be done. However, one typical example is a program that is first run manually, and then will automatically run itself if it gets rebooted. In this case, typically the 'manual' running class would get the name of file without an extension (as is typical in computercraft), and the 'real' running class would get just the .lua extension.
 
-dogreatthings.lua
+dogreatthings
 
-    -- dogreatthings.lua
+    -- dogreatthings
     print('This will do great things. Are you sure you want to do great things? (Ctrl+T to terminate)')
     read()
     
@@ -64,15 +64,15 @@ dogreatthings.lua
     
     -- Create startup file 
     local file = fs.open('startup', 'w')
-    file.write('dofile(\'dogreatthings\')')
+    file.write('dofile(\'dogreatthings.lua\')')
     file.close()
     
     -- Launch program
     dofile('dogreatthings')
 
-dogreatthings
+dogreatthings.lua
 
-    -- dogreatthings
+    -- dogreatthings.lua
     local st = twf.movement.StatefulTurtle.loadSavedState('turtle_state')
 
     if not st then 

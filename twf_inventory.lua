@@ -1222,7 +1222,7 @@ if not twf.inventory.DigResult then
     if     digResult == DigResult.DIG_SUCCESS    then return 'dig succeeded'
     elseif digResult == DigResult.NOTHING_TO_DIG then return 'dig succeeded: nothing to dig'
     elseif digResult == DigResult.NO_ITEM        then return 'dig succeeded: no item acquired'
-    elseif digResult == DigResult.NO_FUEL        then return 'dig failed: no fiel'
+    elseif digResult == DigResult.NO_FUEL        then return 'dig failed: no fuel'
     elseif digResult == DigResult.DIG_FAILED     then return 'dig failed: unknown'
     else error('Expected dig result but got ' .. digResult) end
   end
