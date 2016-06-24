@@ -186,6 +186,11 @@ end
 ----------------------------------------------------------------------------- 
 if not twf.ores.action.DetectOreAction then 
   local DetectOreAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DetectOreAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The direction to inspect in 
@@ -398,6 +403,11 @@ do
   -----------------------------------------------------------------------------
   if not _digveinaction.Action then  
     local Action = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  Action.logFile = nil
     
     -----------------------------------------------------------------------------
     -- Initializes a new instance of this action.
@@ -541,6 +551,15 @@ do
     end
     
     -----------------------------------------------------------------------------
+    -- Sets the log file for this action and its children, if any
+    --
+    -- @param logFile the log file
+    -----------------------------------------------------------------------------
+    function DigVeinActionImpl:setLogFile(logFile)
+      self.logFile = logFile
+    end
+  
+    -----------------------------------------------------------------------------
     -- Performs this action.
     --
     -- Usage: Requires modifying twf.ores.action.DigVeinAction
@@ -596,6 +615,8 @@ do
       --[[  4 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = up}))
       --[[  3 ]] table.insert(digVeinAction.moveStack, DigVeinActionImpl:new({direction = forward}))
       --[[2|1 ]] table.insert(digVeinAction.moveStack, digThenMove(self.direction))
+      
+      digVeinAction:setLogFile(digVeinAction.logFile) -- set child log files
       
       return twf.actionpath.ActionResult.SUCCESS
     end
@@ -687,6 +708,11 @@ end
 ----------------------------------------------------------------------------- 
 if not twf.ores.action.DigVeinAction then 
   local DigVeinAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DigVeinAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The direction to inspect in originally
@@ -735,6 +761,22 @@ if not twf.ores.action.DigVeinAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DigVeinAction:setLogFile(logFile)
+    self.logFile = logFile
+    if self.moveStack then 
+      for _, child in ipairs(self.moveStack) do
+        if type(child.setLogFile) == 'function' then 
+          child:setLogFile(logFile)
+        end
+      end
+    end
   end
   
   -----------------------------------------------------------------------------

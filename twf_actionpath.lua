@@ -32,6 +32,11 @@ if not twf.actionpath.action.Action then
   local Action = {}
   
   -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  Action.logFile = nil
+  
+  -----------------------------------------------------------------------------
   -- Creates a new instance of this action
   --
   -- Usage:
@@ -43,6 +48,16 @@ if not twf.actionpath.action.Action then
   -----------------------------------------------------------------------------
   function Action:new(o)
     error('Action:new(o) should not be called directly!')
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Guarranteed to be called at least once before perform. The log file should
+  -- be set to all of the actions children
+  --
+  -- @param logFile file handle
+  -----------------------------------------------------------------------------
+  function Action:setLogFile(logFile)
+    error('Action:setLogFile(logFile) should not be called!')
   end
   
   -----------------------------------------------------------------------------
@@ -191,6 +206,11 @@ if not twf.actionpath.ActionPath then
   ActionPath.head = nil
   
   -----------------------------------------------------------------------------
+  -- The log file handle for this action path
+  -----------------------------------------------------------------------------
+  ActionPath.logFile = nil
+  
+  -----------------------------------------------------------------------------
   -- List of actions that have been registered with this action path. Required
   -- in order to load actions
   -----------------------------------------------------------------------------
@@ -210,6 +230,7 @@ if not twf.actionpath.ActionPath then
   --
   -- @param o (optional) superseding object
   -- @return a new instance of action path
+  -----------------------------------------------------------------------------
   function ActionPath:new(o)
     o = o or {}
     setmetatable(o, self)
@@ -224,6 +245,16 @@ if not twf.actionpath.ActionPath then
     end
      
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Initializes the actionpath with the specified log file handle.
+  --
+  -- @param logFile the log file, may be nil
+  -----------------------------------------------------------------------------
+  function ActionPath:setLogFile(logFile)
+    self.logFile = logFile
+    self.head:setLogFile(logFile)
   end
   
   -----------------------------------------------------------------------------
@@ -553,8 +584,16 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
     -- It's up to the actions to figure out how to handle the action recovery file
     -- Good luck to 'em!
     
+    local logFile = fs.open('actionpath.log', fs.exists('actionpath.log') and 'w' or 'a')
+    logFile.write('executeActionPath begin')
+    actionPath:setLogFile(logFile)
     while true do 
-      local res = actionPath:tick(self)
+      local tickSuccess, res = pcall(actionPath.tick, actionPath, self)
+      if not tickSuccess then 
+        logFile.write('tick failed! ' .. res)
+        logFile.close()
+        error(res)
+      end
       actionPath:saveToFile(actionPathRecoveryFile)
       self:saveToFile()
       self:finishAction()
@@ -565,9 +604,11 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
       os.pullEvent("twfFakeEventName")
       
       if res ~= twf.actionpath.ActionResult.RUNNING then 
-        if not repeatForever then return end
+        if not repeatForever then break end
       end
     end
+    actionPath:setLogFile(nil)
+    logFile.close()
   end
   
   StatefulTurtle.ACTIONPATH_EXTENSIONS = true
@@ -635,6 +676,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.SequenceAction then
   local SequenceAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  SequenceAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The children of this sequence, in order
@@ -669,6 +715,20 @@ if not twf.actionpath.action.SequenceAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function SequenceAction:setLogFile(logFile)
+    self.logFile = logFile
+    for _, child in ipairs(self.children) do
+      if type(child.setLogFile) == 'function' then 
+        child:setLogFile(logFile)
+      end
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -836,6 +896,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.SelectorAction then
   local SelectorAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  SelectorAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- A table of the children for this selector
@@ -872,6 +937,19 @@ if not twf.actionpath.action.SelectorAction then
     return o
   end
   
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function SelectorAction:setLogFile(logFile)
+    self.logFile = logFile
+    for _, child in ipairs(self.children) do
+      if type(child.setLogFile) == 'function' then 
+        child:setLogFile(logFile)
+      end
+    end
+  end
   
   -----------------------------------------------------------------------------
   -- Visits each child in order, starting with the first. If any child succeeds,
@@ -1035,6 +1113,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.RandomSelectorAction then
   local RandomSelectorAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  RandomSelectorAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The actions that can be chosen from
@@ -1080,6 +1163,21 @@ if not twf.actionpath.action.RandomSelectorAction then
     o.currentIndex = o.currentIndex or 1
     
     return o
+  end
+  
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function RandomSelectorAction:setLogFile(logFile)
+    self.logFile = logFile
+    for _, child in ipairs(self.children) do
+      if type(child.setLogFile) == 'function' then 
+        child:setLogFile(logFile)
+      end
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1270,6 +1368,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.InverterAction then
   local InverterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  InverterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this inverter
@@ -1297,6 +1400,18 @@ if not twf.actionpath.action.InverterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function InverterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1435,6 +1550,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.SucceederAction then
   local SucceederAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  SucceederAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this succeeder
@@ -1462,6 +1582,18 @@ if not twf.actionpath.action.SucceederAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function SucceederAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -1596,6 +1728,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.RepeatUntilFailureAction then
   local RepeatUntilFailureAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  RepeatUntilFailureAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -1624,6 +1761,19 @@ if not twf.actionpath.action.RepeatUntilFailureAction then
     
     return o
   end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function RepeatUntilFailureAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
+  end
+  
   
   -----------------------------------------------------------------------------
   -- Returns RUNNING if the child returns RUNNING or SUCCESS, otherwise returns
@@ -1766,6 +1916,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.RepeaterAction then
   local RepeaterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  RepeaterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -1806,6 +1961,19 @@ if not twf.actionpath.action.RepeaterAction then
     
     return o
   end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function RepeaterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
+  end
+  
   
   -----------------------------------------------------------------------------
   -- Returns failure if the child returns failure. Returns SUCCESS if the child
@@ -1959,6 +2127,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.DieOnFailureAction then
   local DieOnFailureAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DieOnFailureAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -1990,6 +2163,18 @@ if not twf.actionpath.action.DieOnFailureAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DieOnFailureAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2130,6 +2315,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.RetryOnFailureAction then
   local RetryOnFailureAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  RetryOnFailureAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2158,6 +2348,19 @@ if not twf.actionpath.action.RetryOnFailureAction then
     
     return o
   end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function RetryOnFailureAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
+  end
+  
   
   -----------------------------------------------------------------------------
   -- Returns success or running if the child does, and running if the child 
@@ -2300,6 +2503,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.MoveResultInterpreterAction then
   local MoveResultInterpreterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  MoveResultInterpreterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2327,6 +2535,18 @@ if not twf.actionpath.action.MoveResultInterpreterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function MoveResultInterpreterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2470,6 +2690,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.DigResultInterpreterAction then
   local DigResultInterpreterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DigResultInterpreterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2506,6 +2731,18 @@ if not twf.actionpath.action.DigResultInterpreterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DigResultInterpreterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2645,6 +2882,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.PlaceResultInterpreterAction then
   local PlaceResultInterpreterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  PlaceResultInterpreterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2672,6 +2914,18 @@ if not twf.actionpath.action.PlaceResultInterpreterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function PlaceResultInterpreterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2807,6 +3061,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.DropResultInterpreterAction then
   local DropResultInterpreterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DropResultInterpreterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2834,6 +3093,18 @@ if not twf.actionpath.action.DropResultInterpreterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DropResultInterpreterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -2969,6 +3240,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.SuckResultInterpreterAction then
   local SuckResultInterpreterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  SuckResultInterpreterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The child of this action
@@ -2996,6 +3272,18 @@ if not twf.actionpath.action.SuckResultInterpreterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function SuckResultInterpreterAction:setLogFile(logFile)
+    self.logFile = logFile
+    if type(self.child.setLogFile) == 'function' then 
+      self.child:setLogFile(logFile)
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -3134,6 +3422,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.FuelCheckAction then
   local FuelCheckAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  FuelCheckAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The minimum fuel level to return SUCCESS (inclusive)
@@ -3161,6 +3454,15 @@ if not twf.actionpath.action.FuelCheckAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function FuelCheckAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -3297,6 +3599,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.InventoryCheckAction then
   local InventoryCheckAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  InventoryCheckAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The item detail to search for. 'any' indicates any item
@@ -3401,6 +3708,15 @@ if not twf.actionpath.action.InventoryCheckAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function InventoryCheckAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -3648,6 +3964,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.InventorySelectAction then
   local InventorySelectAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  InventorySelectAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The index of the slot to select
@@ -3679,6 +4000,15 @@ if not twf.actionpath.action.InventorySelectAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function InventorySelectAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -3811,6 +4141,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.DropAction then
   local DropAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DropAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- Describes what method is being used to decide what to drop, one of the 
@@ -3921,6 +4256,15 @@ if not twf.actionpath.action.DropAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DropAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -4330,6 +4674,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.CounterAction then
   local CounterAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  CounterAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The id of the counter. 
@@ -4389,6 +4738,15 @@ if not twf.actionpath.action.CounterAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function CounterAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -4556,6 +4914,11 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.DieAction then
   local DieAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  DieAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The message to display 
@@ -4582,6 +4945,15 @@ if not twf.actionpath.action.DieAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function DieAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
@@ -4710,6 +5082,16 @@ end
 -----------------------------------------------------------------------------
 if not twf.actionpath.action.MessageAction then
   local MessageAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  MessageAction.logFile = nil
+  
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action. May be nil
+  -----------------------------------------------------------------------------
+  MessageAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The message to display 
@@ -4736,6 +5118,15 @@ if not twf.actionpath.action.MessageAction then
     end
     
     return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function MessageAction:setLogFile(logFile)
+    self.logFile = logFile
   end
   
   -----------------------------------------------------------------------------
