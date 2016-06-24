@@ -2586,8 +2586,8 @@ if not twf.movement.StatefulTurtle then
   -- @return         the saved stateful turtle or nil
   -----------------------------------------------------------------------------
   function StatefulTurtle.loadSavedState(saveFile)
-    if fs.exists(self.saveFile) then 
-      local file = fs.open(self.saveFile, 'r')
+    if fs.exists(saveFile) then 
+      local file = fs.open(saveFile, 'r')
       local saved = file.readAll()
       file.close()
       
