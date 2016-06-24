@@ -585,12 +585,14 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
     -- Good luck to 'em!
     
     local logFile = fs.open('actionpath.log', fs.exists('actionpath.log') and 'w' or 'a')
-    logFile.write('executeActionPath begin')
+    logFile.writeLine('executeActionPath begin')
     actionPath:setLogFile(logFile)
     while true do 
+      logFile.writeLine('--------- TICK BEGIN ---------')
       local tickSuccess, res = pcall(actionPath.tick, actionPath, self)
+      logFile.writeLine('--------- TICK END ---------')
       if not tickSuccess then 
-        logFile.write('tick failed! ' .. res)
+        logFile.writeLine('tick failed! ' .. res)
         logFile.close()
         error(res)
       end
@@ -749,19 +751,26 @@ if not twf.actionpath.action.SequenceAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SequenceAction:perform(stateTurtle, pathState)
-    local res = self.children[self.currentIndex]:perform(stateTurtle, pathState)
+    self.logFile.writeLine('SequenceAction start')
+    local child = self.children[self.currentIndex]
+    self.logFile.writeLine('SequenceAction ticking child #' .. self.currentIndex .. ' (' .. child.name().. ')')
+    local res = child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then      
       self.currentIndex = self.currentIndex + 1
       if self.currentIndex > #self.children then 
         self.currentIndex = 1
+        self.logFile.writeLine('SequenceAction child returned success, no more children. Returning success')
         return res
       end
       
+      self.logFile.writeLine('SequenceAction child returned success, still have children left. Returning running')
       return twf.actionpath.ActionResult.RUNNING
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('SequenceAction child returned running. Returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('SequenceAction child returned failure. Returning failure')
       self.currentIndex = 1
       return res
     end
@@ -968,20 +977,28 @@ if not twf.actionpath.action.SelectorAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SelectorAction:perform(stateTurtle, pathState)
-    local res = self.children[self.currentIndex]:perform(stateTurtle, pathState)
+    self.logFile.writeLine('SelectorAction start')
+    local child = self.children[self.currentIndex]
+    self.logFile.writeLine('SelectorAction ticking child #' .. self.currentIndex .. ' (' .. child.name() .. ')')
+    local res = child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
       self.currentIndex = 1
+      self.logFile.writeLine('SelectorAction child returned success, returning success')
       return res
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('SelectorAction child returned running, returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
       self.currentIndex = self.currentIndex + 1 
       if self.currentIndex > #self.children then 
         self.currentIndex = 1
+        self.logFile.writeLine('SelectorAction child returned failure, no more children. Returning failure')
         return res
       end
-      return twf.actionpath.ActionResult.SUCCESS
+      
+      self.logFile.writeLine('SelectorAction child returning failure, still have more children. Returning running')
+      return twf.actionpath.ActionResult.RUNNING
     end
     
     error('Should not get here')
@@ -1197,6 +1214,7 @@ if not twf.actionpath.action.RandomSelectorAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function RandomSelectorAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('RandomSelectorAction start')
     local choiceIndex = -1
     if self.currentIndex == nil then 
       local remainingOptions = {}
@@ -1215,28 +1233,34 @@ if not twf.actionpath.action.RandomSelectorAction then
       end
       
       local optionsIndex = math.random(1, #remainingOptions)
-      choiceIndex = remainingOptions[choiceIndex]
+      choiceIndex = remainingOptions[optionsIndex]
       self.bannedIndexes[#self.bannedIndexes + 1] = choiceIndex
     else 
+      self.logFile.writeLine('RandomSelectorAction repeating last choice')
       choiceIndex = self.currentIndex
     end
     
     local choice = self.children[choiceIndex]
+    self.logFile.writeLine('RandomSelectorAction selected child #' .. choiceIndex .. ' (' .. choice.name() .. ')')
     local res = choice:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
       self.bannedIndexes = {}
       self.currentIndex = nil
+      self.logFile.writeLine('RandomSelectorAction child returned success, returning success')
       return res
     elseif res == twf.actionpath.ActionResult.RUNNING then 
       self.currentIndex = choiceIndex
+      self.logFile.writeLine('RandomSelectorAction child returned running, returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
       self.currentIndex = nil
       if #self.bannedIndexes == #self.children then 
         self.bannedIndexes = {}
+        self.logFile.writeLine('RandomSelectorAction child returned failure. No children left. Returning failure')
         return twf.actionpath.ActionResult.FAILURE
       else
+        self.logFile.writeLine('RandomSelectorAction child returned failure, still have children left. Returning running')
         return twf.actionpath.ActionResult.RUNNING
       end
     end
@@ -1430,13 +1454,18 @@ if not twf.actionpath.action.InverterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function InverterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('InverterAction start')
+    self.logFile.writeLine('InverterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.logFile.writeLine('InverterAction child returned success, returning failure')
       return twf.actionpath.ActionResult.FAILURE 
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('InverterAction child returned running, returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('InverterAction child returned failure, returning success')
       return twf.actionpath.ActionResult.SUCCESS
     end
     
@@ -1612,12 +1641,16 @@ if not twf.actionpath.action.SucceederAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SucceederAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('SucceederAction start')
+    self.logFile.writeLine('SucceederAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('SucceederAction child returned running, returning running')
       return res
     end
     
+    self.logFile.writeLine('SucceederAction child didn\'t return running - returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -1792,15 +1825,22 @@ if not twf.actionpath.action.RepeatUntilFailureAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function RepeatUntilFailureAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('RepeatUntilFailureAction start')
+    self.logFile.writeLine('RepeatUntilFailureAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('RepeatUntilFailureAction child returned running - returning running')
       return res
     elseif res == twf.actionpath.ActionResult.SUCCESS then 
+      self.logFile.writeLine('RepeatUntilFailureAction child returned success - returning running')
       return twf.actionpath.ActionResult.RUNNING 
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('RepeatUntilFailureAction child returned failure - returning failure')
+      return twf.actionpath.ActionResult.FAILURE
     end
     
-    return twf.actionpath.ActionResult.FAILURE
+    error('Should not get here')
   end
   
   -----------------------------------------------------------------------------
@@ -1993,6 +2033,8 @@ if not twf.actionpath.action.RepeaterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function RepeaterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('RepeaterAction start')
+    self.logFile.writeLine('RepeaterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
@@ -2000,13 +2042,16 @@ if not twf.actionpath.action.RepeaterAction then
       
       if self.counter == self.times then 
         self.counter = 0
+        self.logFile.writeLine('RepeaterAction child returned success - finished repeating ' .. self.times .. ' times - returning success')
         return twf.actionpath.ActionResult.SUCCESS
       end
-      
+      self.logFile.writeLine('RepeaterAction child returned success, finished ' .. self.counter .. '/' .. self.times .. ' - returning running')
       return twf.actionpath.ActionResult.RUNNING
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('RepeaterAction child returned running - returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('RepeaterAction child returned failure - returning failure')
       self.counter = 0
       return res
     end
@@ -2112,7 +2157,7 @@ if not twf.actionpath.action.RepeaterAction then
   function RepeaterAction.unserialize(serialized, actionPath)
     local serTable = textutils.unserialize(serialized)
     
-    return RepeatUntilFailureAction.unserializeObject(serTable, actionPath)
+    return RepeaterAction.unserializeObject(serTable, actionPath)
   end
   
   twf.actionpath.action.RepeaterAction = RepeaterAction
@@ -2195,15 +2240,19 @@ if not twf.actionpath.action.DieOnFailureAction then
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
   function DieOnFailureAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DieOnFailureAction start')
+    self.logFile.writeLine('DieOnFailureAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.logFile.writeLine('DieOnFailureAction child returned success - returning success')
       return res
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('DieOnFailureAction child returned running - returning running')
       return res
-    else
-      if res == nil then res = 'nil' end
-      error('World is coming to an end - my child returned ' .. res)
+    elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('DieOnFailureAction child returned failure - dieing')
+      error('DieOnFailureAction - child returned failure')
     end
   end
   
@@ -2380,13 +2429,18 @@ if not twf.actionpath.action.RetryOnFailureAction then
   -- @error  if the child returns failure
   -----------------------------------------------------------------------------
   function RetryOnFailureAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('RetryOnFailureAction start')
+    self.logFile.writeLine('RetryOnFailureAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.actionpath.ActionResult.SUCCESS then 
+      self.logFile.writeLine('RetryOnFailureAction child returned success - returning success')
       return res
     elseif res == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('RetryOnFailureAction child returned running - returning running')
       return res
     elseif res == twf.actionpath.ActionResult.FAILURE then 
+      self.logFile.writeLine('RetryOnFailureAction child returned failure - returning running')
       os.sleep(0.1)
       return twf.actionpath.ActionResult.RUNNING
     end
@@ -2566,19 +2620,26 @@ if not twf.actionpath.action.MoveResultInterpreterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function MoveResultInterpreterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('MoveResultInterpreterAction start')
     if fs.exists(stateTurtle.actionRecoveryFile) then 
+      self.logFile.writeLine('MoveResultInterpreterAction action recovery file detected, recovering')
       local moved = stateTurtle:recoverAction()
       if moved then 
+        self.logFile.writeLine('MoveResultInterpreterAction action recovery file indicates success - returning success')
         return twf.actionpath.ActionResult.SUCCESS
       end
+      self.logFile.writeLine('MoveResultInterpreterAction action recovery file indicated failure - ignoring')
     end
     
+    self.logFile.writeLine('MoveResultInterpreterAction ticking child (' .. self.child.name() .. ')')
     stateTurtle:prepareAction(self.child)
     local res = self.child:perform(stateTurtle, pathState)
     if twf.movement.MovementResult.isSuccess(res) then 
+      self.logFile.writeLine('MoveResultInterpreterAction child returned ' .. twf.movement.MovementResult.toString(res) .. ' - returning success')
       self.child:updateState(stateTurtle, pathState)
       return twf.actionpath.ActionResult.SUCCESS
     else 
+      self.logFile.writeLine('MoveResultInterpreterAction child returned ' .. twf.movement.MovementResult.toString(res) .. ' - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -2762,13 +2823,18 @@ if not twf.actionpath.action.DigResultInterpreterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DigResultInterpreterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DigResultInterpreterAction start')
+    self.logFile.writeLine('DigResultInterpreterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if res == twf.inventory.DigResult.DIG_SUCCESS then 
+      self.logFile.writeLine('DigResultInterpreterAction child returned ' .. twf.inventory.DigResult.toString(res) .. ' - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     elseif self.noBlockIsSuccess and res == twf.inventory.DigResult.NOTHING_TO_DIG then 
+      self.logFile.writeLine('DigResultInterpreterAction child returned ' .. twf.inventory.DigResult.toString(res) .. ' and noBlockIsSuccess=true - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else
+      self.logFile.writeLine('DigResultInterpreterAction child returned ' .. twf.inventory.DigResult.toString(res) .. ' (noBlockIsSuccess = ' .. tostring(self.noBlockIsSuccess) .. ') - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -2945,11 +3011,15 @@ if not twf.actionpath.action.PlaceResultInterpreterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function PlaceResultInterpreterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('PlaceResultInterpreterAction start')
+    self.logFile.writeLine('PlaceResultInterpreterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if twf.inventory.PlaceResult.isSuccess(res) then 
+      self.logFile.writeLine('PlaceResultInterpreterAction child returned ' .. twf.inventory.PlaceResult.toString(res) .. ' - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else
+      self.logFile.writeLine('PlaceResultInterpreterAction child returned ' .. twf.inventory.PlaceResult.toString(res) .. ' - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -3124,11 +3194,15 @@ if not twf.actionpath.action.DropResultInterpreterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DropResultInterpreterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DropResultInterpreterAction start')
+    self.logFile.writeLine('DropResultInterpreterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurle, pathState)
     
     if twf.inventory.DropResult.isSuccess(res) then 
+      self.logFile.writeLine('DropResultInterpreterAction child returned ' .. twf.inventory.DropResult.toString(res) .. ' - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else
+      self.logFile.writeLine('DropResultInterpreterAction child returned ' .. twf.inventory.DropResult.toString(res) .. ' - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -3303,11 +3377,15 @@ if not twf.actionpath.action.SuckResultInterpreterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function SuckResultInterpreterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('SuckResultInterpreterAction start')
+    self.logFile.writeLine('SuckResultInterpreterAction ticking child (' .. self.child.name() .. ')')
     local res = self.child:perform(stateTurtle, pathState)
     
     if twf.inventory.SuckResult.isSuccess(res) then 
+      self.logFile.writeLine('SuckResultInterpreterAction child returned ' .. twf.inventory.SuckResult.toString(res) .. ' - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else
+      self.logFile.writeLine('SuckResultInterpreterAction child returned ' .. twf.inventory.SuckResult.toString(res) .. ' - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -3482,11 +3560,16 @@ if not twf.actionpath.action.FuelCheckAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function FuelCheckAction:perform(stateTurtle, pathState)
-    local succ = turtle.getFuelLevel() >= self.fuelLevel
+    self.logFile.writeLine('FuelCheckAction (fuelLevel = ' .. self.fuelLevel .. ') start')
+    local turtleFuel = turtle.getFuelLevel()
+    self.logFile.writeLine('FuelCheckAction turtle fuel level = ' .. turtleFuel)
+    local succ = turtleFuel >= self.fuelLevel
     
     if succ then 
+      self.logFile.writeLine('FuelCheckAction returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else 
+      self.logFile.writeLine('FuelCheckAction returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -3820,16 +3903,25 @@ if not twf.actionpath.action.InventoryCheckAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function InventoryCheckAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('InventoryCheckAction (countCheck = ' .. self.countCheck .. ') start')
+    self.logFile.writeLine('InventoryCheckAction calculating relevant inventory')
     local relevantInventory = self:inventoryForSlots(stateTurtle)
     local totalCount = 0
     
     for i = 1, 16 do 
       local item = relevantInventory:getItemDetailAt(i)
       
-      if item and self:itemMatches(item) then 
-        totalCount = totalCount + item.count
+      if item then
+        if self:itemMatches(item) then 
+          self.logFile.writeLine('InventoryCheckAction detected ' .. item:toString() .. ', which passed requirements')
+          totalCount = totalCount + item.count
+        else
+          self.logFile.writeLine('InventoryCheckAction detected ' .. item:toString() .. ', but it didn\'t pass requirements')
+        end
       end
     end
+    
+    self.logFile.writeLine('InventoryCheckAction determined that ' .. totalCount .. ' items pass requirements')
     
     local succ = false
     if self.countCheck == 'none' then 
@@ -3845,8 +3937,10 @@ if not twf.actionpath.action.InventoryCheckAction then
     end
     
     if succ then 
+      self.logFile.writeLine('InventoryCheckAction returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else
+      self.logFile.writeLine('InventoryCheckAction returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
   end
@@ -4027,10 +4121,12 @@ if not twf.actionpath.action.InventorySelectAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function InventorySelectAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('InventorySelectAction (slotIndex = ' .. self.slotIndex .. ') start')
     turtle.select(self.slotIndex)
     stateTurtle.selectedSlot = self.slotIndex
-	
-	return twf.actionpath.ActionResult.SUCCESS
+	  
+    self.logFile.writeLine('InventorySelectAction returning success')
+	  return twf.actionpath.ActionResult.SUCCESS
   end
   
   -----------------------------------------------------------------------------
@@ -4289,12 +4385,16 @@ if not twf.actionpath.action.DropAction then
   --         for what items were dropped, if any
   -----------------------------------------------------------------------------
   function DropAction:drop(stateTurtle, pathState, amount)
+    self.logFile.writeLine('DropAction drop (amount = ' .. tostring(amount) .. ') start')
     local delegate = twf.inventory.action.DropAction:new({direction = self.direction, amount = amount})
     local res, item = delegate:perform(stateTurtle, pathState)
     
+    self.logFile.writeLine('DropAction drop delegate returned ' .. twf.inventory.DropResult.toString(res))
     if twf.inventory.DropResult.isSuccess(res) then 
+      self.logFile.writeLine('DropAction drop returning (success, ' .. (type(item) ~= 'table' and tostring(item) or item:toString()) .. ')')
       return twf.actionpath.ActionResult.SUCCESS, item
     else 
+      self.logFile.writeLine('DropAction drop returning (failure, ' .. (type(item) ~= 'table' and tostring(item) or item:toString()) .. ')')
       return twf.actionpath.ActionResult.FAILURE, item
     end
   end
@@ -4319,15 +4419,19 @@ if not twf.actionpath.action.DropAction then
   -- @return twf.actionpath.ActionResult
   -----------------------------------------------------------------------------
   function DropAction:dropBySlot(stateTurtle, pathState)
+    self.logFile.writeLine('DropAction dropBySlot (slots = ' .. textutils.serialize(self.slots) .. ') start')
     for i = 1, #self.slots do 
+      self.logFile.writeLine('DropAction dropBySlot selecting ' .. self.slots[i])
       stateTurtle:selectSlot(self.slots[i])
       
+      self.logFile.writeLine('DropAction dropBySlot dropping from current slot')
       local res, item = self:drop(stateTurtle, pathState)
       if res == twf.actionpath.ActionResult.FAILURE then 
+        self.logFile.writeLine('DropAction dropBySlot failed to drop from current slot')
         return res
       end
     end
-    
+    self.logFile.writeLine('DropAction dropBySlot returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -4352,16 +4456,28 @@ if not twf.actionpath.action.DropAction then
   --         are dropped, failure otherwise
   -----------------------------------------------------------------------------
   function DropAction:dropByItem(stateTurtle, pathState)
+    local inspect = dofile('inspect.lua')
+    if not inspect then inspect = textutils.serialize end
+    
+    -- This line is long because its mostly just prettifying the text. If inspect.lua is available, it uses it to print the items in one line (ignoring metatables)
+    -- otherwise, it falls back to textutils (which clutters the logfile more)
+    self.logFile.writeLine('DropAction dropByItem (#items = ' .. #self.items .. ') start')
     for i = 1, #self.items do 
+      self.logFile.writeLine('DropAction dropping ' .. self.items[i].name 'x' .. self.items[i].count)
+      
       local toDrop = self.items[i].count
       local nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
       
       while nextIndex > 0 and toDrop > 0 do 
+        self.logFile.writeLine('DropAction dropByItem loop (i = ' .. i .. ', toDrop = ' .. toDrop .. ', nextIndex = ' .. nextIndex .. ') start')
+        self.logFile.writeLine('DropAction dropByItem loop selecting ' .. nextIndex)
         stateTurtle:selectSlot(nextIndex)
         
+        self.logFile.writeLine('DropAction dropByItem loop dropping ' .. toDrop)
         local res, item = self:drop(stateTurtle, pathState, toDrop)
         
         if res == twf.actionpath.ActionResult.FAILURE then 
+          self.logFile.writeLine('DropAction dropByItem loop drop returned failure - returning failure')
           return res
         end
         
@@ -4372,8 +4488,10 @@ if not twf.actionpath.action.DropAction then
         toDrop = toDrop - item.count
         nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
       end
+      self.logFile.writeLine('DropAction dropByItem loop end (toDrop = ' .. toDrop .. ', nextIndex = ' .. nextIndex ..')')
     end
     
+    self.logFile.writeLine('DropAction dropByItem returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
  
@@ -4398,22 +4516,32 @@ if not twf.actionpath.action.DropAction then
   --         are dropped, failure otherwise
   -----------------------------------------------------------------------------
   function DropAction:dropByItemType(stateTurtle, pathState)
+    self.logFile.writeLine('DropAction dropByItemType (#items = ' .. #self.items .. ') start')
     for i = 1, #self.items do 
+      self.logFile.writeLine('DropAction dropByItemType dropping all of ' .. self.items[i].name)
       local nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
       
       while nextIndex > 0 do 
+        self.logFile.writeLine('DropAction dropByItemType loop (i = ' .. i .. ', nextIndex = ' .. nextIndex .. ') start')
+        
+        self.logFile.writeLine('DropAction dropByItemType loop selecting ' .. nextIndex)
         stateTurtle:selectSlot(nextIndex)
         
+        self.logFile.writeLine('DropAction dropByItemType loop dropping')
         local res, item = self:drop(stateTurtle, pathState, toDrop)
         
-        if res == twf.actionpath.ActionResult.FAILURE then 
+        if res == twf.actionpath.ActionResult.FAILURE then
+          self.logFile.writeLine('DropAction dropByItemType loop drop returned failure - returning failure')        
           return res
         end
         
         nextIndex = stateTurtle.inventory:firstIndexOf(self.items[i], self.itemStrict)
       end
+      
+      self.logFile.writeLine('DropAction dropByItemType loop end (nextIndex = ' .. nextIndex .. ')')
     end
     
+    self.logFile.writeLine('DropAction dropByItemType returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -4440,10 +4568,15 @@ if not twf.actionpath.action.DropAction then
   --         are dropped, failure otherwise
   -----------------------------------------------------------------------------
   function DropAction:dropByExceptItemType(stateTurtle, pathState)
+    self.logFile.writeLine('DropAction dropByExceptItemType start')
+    
     for i = 1, 16 do 
+      self.logFile.writeLine('DropAction dropByExceptItemType loop (i=' .. i .. ') start')
+      self.logFile.writeLine('DropAction dropByExceptItemType loop checking item at slot ' .. i)
       local item = stateTurtle.inventory:getItemDetailAt(i)
       
       if item then 
+        self.logFile.writeLine('DropAction dropByExceptItemType loop item name = ' .. item.name)
         local skip = false
         if self.itemStrict then 
           for j = 1, #items do 
@@ -4458,16 +4591,24 @@ if not twf.actionpath.action.DropAction then
         end
         
         if not skip then 
+          self.logFile.writeLine('DropAction dropByExceptItemType loop item not banned, selecting slot ' .. i)
           stateTurtle:selectSlot(i)
+          self.logFile.writeLine('DropAction dropByExceptItemType loop dropping')
           local res, item = self:drop(stateTurtle, pathState)
           
           if res == twf.actionpath.ActionResult.FAILURE then 
+            self.logFile.writeLine('DropAction dropByExceptItemType loop drop returned failure - returning failure')
             return res 
           end
+        else 
+          self.logFile.writeLine('DropAction dropByExceptItemType loop item banned! not dropping')
         end
+      else
+        self.logFile.writeLine('DropAction dropByExceptItemType loop nothing at slot ' .. i)
       end
     end
-    
+    self.logFile.writeLine('DropAction dropByExceptItemType loop end')
+    self.logFile.writeLine('DropAction dropByExceptItemType returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -4491,19 +4632,26 @@ if not twf.actionpath.action.DropAction then
   --         are dropped, failure otherwise
   -----------------------------------------------------------------------------
   function DropAction:dropByAll(stateTurtle, pathState)
+    self.logFile.writeLine('DropAction dropByAll start')
     local nextIndex = stateTurtle.inventory:firstIndexOfFilledSlot()
     
     while nextIndex > 0 do 
+      self.logFile.writeLine('DropAction dropByAll loop (nextIndex = ' .. nextIndex .. ') start')
+      self.logFile.writeLine('DropAction dropByAll loop selecting slot ' .. nextIndex)
       stateTurtle:selectSlot(nextIndex)
+      
+      self.logFile.writeLine('DropAction dropByAll loop dropping')
       local res, item = self:drop(stateTurtle, pathState)
       
       if res == twf.actionpath.ActionResult.FAILURE then 
+        self.logFile.writeLine('DropAction dropByAll loop drop returned failure - returning failure')
         return res
       end
       
       nextIndex = stateTurtle.inventory:firstIndexOfFilledSlot()
     end
-    
+    self.logFile.writeLine('DropAction dropByAll loop end')
+    self.logFile.writeLine('DropAction dropByAll returning success') 
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -4528,6 +4676,7 @@ if not twf.actionpath.action.DropAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DropAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DropAction (dropBy = ' .. self.dropBy .. ', direction = ' .. twf.movement.direction.toString(self.direction) .. ') start')
     if     self.dropBy == 'slot'           then return self:dropBySlot(stateTurtle, pathState)
     elseif self.dropBy == 'item'           then return self:dropByItem(stateTurtle, pathState)
     elseif self.dropBy == 'itemType'       then return self:dropByItemType(stateTurtle, pathState)
@@ -4750,7 +4899,7 @@ if not twf.actionpath.action.CounterAction then
   end
   
   -----------------------------------------------------------------------------
-  -- Performs this action. Always returns success
+  -- Performs this action. 
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
@@ -4766,6 +4915,7 @@ if not twf.actionpath.action.CounterAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function CounterAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('CounterAction (id = ' .. self.id .. ', actionType = ' .. self.actionType .. ', number = ' .. self.number .. ') start')
     if not pathState.counters then 
       pathState.counters = {}
     end
@@ -4774,31 +4924,42 @@ if not twf.actionpath.action.CounterAction then
       pathState.counters[self.id] = 0 
     end
     
+    self.logFile.writeLine('CounterAction loaded counter; value = ' .. pathState.counters[self.id])
     if self.actionType == 'equals' then 
       if pathState.counters[self.id] == self.number then 
+        self.logFile.writeLine('CounterAction returning success')
         return twf.actionpath.ActionResult.SUCCESS
       else 
+        self.logFile.writeLine('CounterAction returning failure')
         return twf.actionpath.ActionResult.FAILURE
       end
     elseif self.actionType == 'greaterThan' then 
       if pathState.counters[self.id] > self.number then 
+        self.logFile.writeLine('CounterAction returning success')
         return twf.actionpath.ActionResult.SUCCESS
       else 
+        self.logFile.writeLine('CounterAction returning failure')
         return twf.actionpath.ActionResult.FAILURE
       end
     elseif self.actionType == 'lessThan' then 
       if pathState.counters[self.id] == self.number then 
+        self.logFile.writeLine('CounterAction returning success')
         return twf.actionpath.ActionResult.SUCCESS
       else 
+        self.logFile.writeLine('CounterAction returning failure')
         return twf.actionpath.ActionResult.FAILURE
       end
     elseif self.actionType == 'set' then 
+      self.logFile.writeLine('CounterAction setting counter to ' .. self.number)
       pathState.counters[self.id] = self.number
       
+      self.logFile.writeLine('CounterAction returning success')
       return twf.actionpath.ActionResult.SUCCESS
     elseif self.actionType == 'add' then 
+      self.logFile.writeLine('CounterAction setting counter to ' .. (pathState.counters[self.id] + self.number))
       pathState.counters[self.id] = pathState.counters[self.id] + self.number
       
+      self.logFile.writeLine('CounterAction returning success')
       return twf.actionpath.ActionResult.SUCCESS
     else 
       error('Unexpected action type in CounterAction:perform!')
@@ -4974,6 +5135,8 @@ if not twf.actionpath.action.DieAction then
   -- @error always
   -----------------------------------------------------------------------------
   function DieAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DieAction (message = ' .. self.message .. ') start')
+    self.logFile.writeLine('DieAction dieing')
     error(self.message)
   end
   
@@ -5147,8 +5310,11 @@ if not twf.actionpath.action.MessageAction then
   -- @error always
   -----------------------------------------------------------------------------
   function MessageAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('MessageAction (message = ' .. self.message .. ') start')
+    self.logFile.writeLine('MessageAction printing')
     print(self.message)
     
+    self.logFile.writeLine('MessageAction returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   

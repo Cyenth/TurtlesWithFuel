@@ -34,7 +34,7 @@ twf.actionpath.ActionPath:new({
     Succeeder:new({child = 
       Sequence:new({children = {
         InventoryCheck:new({ 
-          item = { name = 'any', count = 1 },
+          item = { name = 'any', count = 0 },
           slots = 'any',
           countCheck = 'minimum'
         }),

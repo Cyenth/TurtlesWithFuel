@@ -269,18 +269,23 @@ if not twf.ores.action.DetectOreAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DetectOreAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DetectOreAction (direction = ' .. twf.movement.direction.toString(self.direction) .. ') start') 
+    self.logFile.writeLine('DetectOreAction inspecting') 
     local succ, info = self:inspect(stateTurtle, pathState)
     
     if not succ then 
+      self.logFile.writeLine('DetectOreAction nothing there so no ore')
       return twf.actionpath.ActionResult.FAILURE
     end
     
     local name = info.name
     
     if self.blacklist:contains(name) then 
+      self.logFile.writeLine('DetectOreAction blacklist contains ' .. name .. ' - returning failure')
       return twf.actionpath.ActionResult.FAILURE
     end
     
+    self.logFile.writeLine('DetectOreAction blacklist doesn\'t contain ' .. name .. ' - returning success')
     return twf.actionpath.ActionResult.SUCCESS
   end
   
@@ -404,10 +409,10 @@ do
   if not _digveinaction.Action then  
     local Action = {}
 
-  -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
-  -----------------------------------------------------------------------------
-  Action.logFile = nil
+    -----------------------------------------------------------------------------
+    -- The log file handle for this action. May be nil
+    -----------------------------------------------------------------------------
+    Action.logFile = nil
     
     -----------------------------------------------------------------------------
     -- Initializes a new instance of this action.
@@ -520,6 +525,11 @@ do
     local DigVeinActionImpl = {}
     
     -----------------------------------------------------------------------------
+    -- The log file handle for this action. May be nil
+    -----------------------------------------------------------------------------
+    DigVeinActionImpl.logFile = nil
+    
+    -----------------------------------------------------------------------------
     -- The direction to search for ores in
     -----------------------------------------------------------------------------
     DigVeinActionImpl.direction = nil
@@ -570,12 +580,16 @@ do
     --                      stack from.
     -----------------------------------------------------------------------------
     function DigVeinActionImpl:perform(stateTurtle, pathState, digVeinAction)
+      self.logFile.write('DigVeinActionImpl (direction = ' .. twf.movement.direction.toString(self.direction) .. ') start')
+      self.logFile.write('DigVeinActionImpl determining if there is an ore')
       local isOre = digVeinAction:isOre(stateTurtle, pathState, self.direction)
       
       if not isOre then 
+        self.logFile.write('DigVeinActionImpl there is not - returning success')
         return twf.actionpath.ActionResult.SUCCESS
       end
       
+      self.logFile.write('DigVeinActionImpl there is - pushing child actions to the stack')
       
       -- pull a few constants out to make these lines easier to read
       local left = twf.movement.direction.LEFT
@@ -618,6 +632,7 @@ do
       
       digVeinAction:setLogFile(digVeinAction.logFile) -- set child log files
       
+      self.logFile.write('DigVeinActionImpl returning success')
       return twf.actionpath.ActionResult.SUCCESS
     end
     
@@ -838,25 +853,36 @@ if not twf.ores.action.DigVeinAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function DigVeinAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('DigVeinAction start')
     if self.moveStack == nil then
+      self.logFile.writeLine('DigVeinAction move stack is nil; initializing movestack')
       self.moveStack = {}
       table.insert(self.moveStack, twf.ores._digveinaction.DigVeinActionImpl:new({direction = self.direction}))
+      self:setLogFile(self.logFile)
+      self.logFile.writeLine('DigVeinAction returning running')
       return twf.actionpath.ActionResult.RUNNING
     end
     
     if #self.moveStack == 0 then 
       self.moveStack = nil
+      self.logFile.writeLine('DigVeinAction move stack is empty - returning success')
       return twf.actionpath.ActionResult.SUCCESS
     end
     
+    self.logFile.writeLine('DigVeinAction move stack is not nil or empty, popping action off')
     local act = table.remove(self.moveStack)
+    self.logFile.writeLine('DigVeinAction ticking ' .. act.name())
     local result = act:perform(stateTurtle, pathState, self)
     if result == twf.actionpath.ActionResult.SUCCESS then 
+      self.logFile.writeLine('DigVeinAction child returned success - returning running')
       return twf.actionpath.ActionResult.RUNNING 
     elseif result == twf.actionpath.ActionResult.RUNNING then 
+      self.logFile.writeLine('DigVeinAction child returned running, putting back on movestack')
       table.insert(self.moveStack, act)
+      self.logFile.writeLine('DigVeinAction returning running')
       return result
     elseif result == twf.actionpath.ActionResult.FAILURE then
+      self.logFile.writeLine('DigVeinAction child returned failure, putting back on movestack - returning failure')
       table.insert(self.moveStack, act) -- this should never happen, and probably indicates we're about to die
       return result
     end

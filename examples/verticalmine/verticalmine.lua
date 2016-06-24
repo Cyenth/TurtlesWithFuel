@@ -9,6 +9,9 @@ if not st then
   })
 end
 
+st:loadInventoryFromTurtle()
+st.fuelLevel = turtle.getFuelLevel()
+
 local actPath = twf.actionpath.ActionPath:new()
 actPath:registerActions(twf.movement.action, twf.inventory.action, twf.actionpath.action, twf.ores.action, twf.ores._digveinaction)
 st:executeActionPath(actPath, 'verticalmine', 'verticalmine', false)
