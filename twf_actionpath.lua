@@ -565,7 +565,6 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
       os.pullEvent("twfFakeEventName")
       
       if res ~= twf.actionpath.ActionResult.RUNNING then 
-        print('res = ' .. res)
         if not repeatForever then return end
       end
     end
