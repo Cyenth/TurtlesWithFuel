@@ -68,7 +68,7 @@ dogreatthings
     file.close()
     
     -- Launch program
-    dofile('dogreatthings')
+    dofile('dogreatthings.lua')
 
 dogreatthings.lua
 
