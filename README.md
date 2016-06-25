@@ -100,4 +100,4 @@ dogreatthings.lua
       file.delete('startup')
     end
 
-Hopefully this doesn't seem like too much boilerplate if you're familiar what it normally looks like to be able to recover from being rebooted. The only knew concept here (besides some functions) is the StatefulTurtle - it is the class that handles the state of the turtle, including the "microscopic" action recovery required for the move actions. Generally, if you are using action paths, then you don't need to worry about it more than shown here.
+Hopefully this doesn't seem like too much boilerplate if you're familiar what it normally looks like to be able to recover from being rebooted. The only new concept here (besides some functions) is the StatefulTurtle - it is the class that handles the state of the turtle, including the "microscopic" action recovery required for the move actions. Generally, if you are using action paths, then you don't need to worry about it more than shown here.
