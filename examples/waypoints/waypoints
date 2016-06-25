@@ -1,0 +1,12 @@
+dofile('waypoints.actionpath.lua')
+
+fs.delete('turtle_state.dat')
+fs.delete('turtle_state_action_recovery.dat')
+fs.delete('waypoints_recovery.dat')
+fs.delete('actionpath.log')
+
+local file = fs.open('startup', 'w')
+file.write('dofile(\'waypoints.lua\')')
+file.close()
+
+dofile('waypoints.lua')

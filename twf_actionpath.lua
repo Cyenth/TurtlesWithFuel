@@ -61,8 +61,7 @@ if not twf.actionpath.action.Action then
   end
   
   -----------------------------------------------------------------------------
-  -- Performs this action. Returns the result of the action. The actionpath 
-  -- such that the last action is assumed to have succeeded.
+  -- Performs this action. Returns the result of the action. 
   --
   -- Usage:
   --   dofile('twf_actionpath.lua')
