@@ -2,6 +2,10 @@
 
 Contains the core TWF library, as well as several programs built with it. This readme aims to provide a quick entry to this library - for longer overview [read the wiki](https://github.com/Cyenth/TurtlesWithFuel/wiki).
 
+## Credits
+
+I've been meaning to create movement persistance for a long time, but using fuel to achieve that was thought up by [Lama](https://github.com/fnuecke/lama/blob/master/apis/lama) - which is a great alternative!
+
 ## What and why?
 
 ComputerCraft is a popular, and my personal favorite, mod for Minecraft. It creates a new type of block, called a 'turtle'. These 'turtles' will run a lua interpreter, and come with various default libraries for movement, digging, placing, etc.. However, it will only run lua files from the top. This normally isn't an issue, since typically programs start at the top and continue downward. However, since Minecraft is a sandbox with a theoretically infinite world, it does not keep the whole world loaded. In fact, it aggressively unloads any area not sufficiently close to a player. 
