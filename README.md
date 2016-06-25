@@ -1,6 +1,6 @@
 # TurtlesWithFuel
 
-Contains the core TWF library, as well as several programs built with it.
+Contains the core TWF library, as well as several programs built with it. This readme aims to provide a quick entry to this library - for longer overview [read the wiki](https://github.com/Cyenth/TurtlesWithFuel/wiki).
 
 ## What and why?
 
