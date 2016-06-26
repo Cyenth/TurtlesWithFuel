@@ -1,6 +1,6 @@
 dofile('twf_waypoints.lua')
 
-local st = twf.movement.StatefulTurtle.loadSavedState('turtle_state')
+local st = twf.movement.StatefulTurtle.loadSavedState('turtle_state.dat')
 
 if not st then 
   st = twf.movement.StatefulTurtle:new({

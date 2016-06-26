@@ -1,0 +1,12 @@
+dofile('quarry.actionpath.lua')
+
+fs.delete('turtle_state.dat')
+fs.delete('turtle_state_action_recovery.dat')
+fs.delete('quarry_recovery.dat')
+fs.delete('actionpath.log')
+
+local file = fs.open('startup', 'w')
+file.write('dofile(\'quarry.lua\')')
+file.close()
+
+dofile('quarry.lua')

@@ -36,6 +36,7 @@ if not twf.ores.DEFAULT_BLACKLIST then
     'minecraft:grass',
     'minecraft:tallgrass',
     'minecraft:bedrock',
+    'minecraft:chest',
     'chisel:andesite',
     'chisel:limestone',
     'chisel:granite',

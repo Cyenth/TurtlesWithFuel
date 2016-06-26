@@ -36,6 +36,11 @@ if not twf.waypoints.Waypoint then
   Waypoint.position = nil
   
   -----------------------------------------------------------------------------
+  -- The orientation of this waypoint. May be nil
+  -----------------------------------------------------------------------------
+  Waypoint.orientation = nil
+  
+  -----------------------------------------------------------------------------
   -- Creates a new instance of waypoint
   --
   -- Usage:
@@ -43,12 +48,14 @@ if not twf.waypoints.Waypoint then
   --   local waypoint = twf.waypoints.Waypoint:new({
   --     name = 'start',
   --     id = 1,
-  --     position = twf.movement.Position:new({x = 0, y = 0, z = 0})
+  --     position = twf.movement.Position:new({x = 0, y = 0, z = 0}),
+  --     orientation = twf.movement.direction.NORTH
   --   })
   --
   -- @param o superseding object
   -- @error   if o.id is not a number
   -- @error   if o.position is not a position
+  -- @error   if o.orientation is not nil and not a valid direction to face
   -----------------------------------------------------------------------------
   function Waypoint:new(o)
     o = o or {}
@@ -61,6 +68,17 @@ if not twf.waypoints.Waypoint then
     
     if type(o.position) ~= 'table' then 
       error('Expected o.position to be a position, but it is ' .. type(o.position))
+    end
+    
+    if type(o.orientation) == 'number' then 
+      local orientationIsValid = o.orientation == twf.movement.direction.NORTH
+      orientationIsValid = orientationIsValid or o.orientation == twf.movement.direction.WEST
+      orientationIsValid = orientationIsValid or o.orientation == twf.movement.direction.EAST
+      orientationIsValid = orientationIsValid or o.orientation == twf.movement.direction.SOUTH
+      
+      if not orientationIsValid then 
+        error('Expected o.orientation to be nil or a direction to face, but it is ' .. o.orientation)
+      end
     end
     
     return o
@@ -87,6 +105,9 @@ if not twf.waypoints.Waypoint then
     resultTable.name = self.name
     resultTable.id = self.id
     resultTable.position = self.position:serializableObject()
+    if self.orientation then 
+      resultTable.orientation = twf.movement.direction.serializableObject(self.orientation)
+    end
     
     return resultTable
   end
@@ -111,11 +132,16 @@ if not twf.waypoints.Waypoint then
     local name = serialized.name
     local id = serialized.id
     local position = twf.movement.Position.unserializeObject(serialized.position)
+    local orientation = nil
+    if serialized.orientation then 
+      orientation = twf.movement.direction.unserializeObject(serialized.orientation)
+    end
     
     return Waypoint:new({
       name = name,
       id = id,
-      position = position
+      position = position,
+      orientation = orientation
     })
   end
   
@@ -177,7 +203,8 @@ if not twf.waypoints.Waypoint then
     return Waypoint:new({
       name = self.name,
       id = self.id,
-      position = self.position:clone()
+      position = self.position:clone(),
+      orientation = self.orientation
     })
   end
   
@@ -191,7 +218,7 @@ if not twf.waypoints.Waypoint then
   --     id = 1,
   --     position = twf.movement.Position:new({x = 0, y = 0, z = 0})
   --   })
-  --   -- prints waypoint start (id=1) at (0, 0, 0)
+  --   -- prints waypoint start (id=1) at (0, 0, 0) facing north (-z)
   --   print waypoint:toString()
   -----------------------------------------------------------------------------
   function Waypoint:toString()
@@ -199,7 +226,13 @@ if not twf.waypoints.Waypoint then
     if self.name then  
       result = result .. self.name.. ' '
     end
+    
     result = result .. '(id=' .. self.id .. ') at ' .. self.position:toString()
+    
+    if self.orientation then 
+      result = result .. ' facing ' .. twf.movement.direction.toString(self.orientation)
+    end
+    
     return result
   end
   
@@ -370,6 +403,33 @@ if not twf.waypoints.WaypointRegistry then
     end
     
     return nil
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Either adds the waypoint if there are no conflicts, or replaces the 
+  -- conflicting waypoint.
+  -- 
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local waypointRegistry = <omitted>
+  --   local someWaypoint = waypointRegistry:gaddOrSetWaypoint(twf.waypoints.Waypoint:new({
+  --      name = 'test', id = 1, position = twf.movement.position:new({x = 0, y = 0, z = 0})
+  --   })
+  --
+  -- @param waypoint the waypoint to add or set into this registry
+  -----------------------------------------------------------------------------
+  function WaypointRegistry:addOrSetWaypoint(waypoint)
+    local i = 1
+    while i <= #self.waypoints do 
+      if self.waypoints[i].id == waypoint.id or self.waypoints[i].name == waypoint.id then 
+        table.remove(self.waypoints, i)
+        i = i - 1
+      end
+      
+      i = i + 1
+    end
+    
+    table.insert(self.waypoints, waypoint)
   end
   
   -----------------------------------------------------------------------------
@@ -746,8 +806,8 @@ if not twf.waypoints.action.GotoWaypointAction then
         })
       elseif self.onObstruction == 'dig' then
         act = twf.actionpath.action.SucceederAction:new({child =
-          twf.actionpath.action.RepeatUntilFailureAction:new({child =                          -- until we 
-            twf.actionpath.action.InverterAction:new({                                               -- succeed
+          twf.actionpath.action.RepeatUntilFailureAction:new({child =                                -- until we 
+            twf.actionpath.action.InverterAction:new({child =                                        -- succeed
               twf.actionpath.action.SelectorAction:new({children = {                                 -- try to 
                 act,                                                                                 -- move, but if that fails
                 twf.actionpath.action.InverterAction:new({child =                                    -- always return failure
@@ -897,15 +957,15 @@ if not twf.waypoints.action.GotoWaypointAction then
       local dz = stateTurtle.position.z - waypoint.position.z
       
       local unsorted = {
-        {goInX, dx},
-        {goInY, dy},
-        {goInZ, dz}
+        {goInX, dx, 'x'},
+        {goInY, dy, 'y'},
+        {goInZ, dz, 'z'}
       }
       
       local swapped = true -- bubble sort, why not
       while swapped do 
         swapped = false
-        for i = 2, #unsorted+1 do 
+        for i = 2, #unsorted do 
           if math.abs(unsorted[i - 1][2]) < math.abs(unsorted[i][2]) then
             local tmp = unsorted[i]
             unsorted[i] = unsorted[i - 1]
@@ -921,6 +981,10 @@ if not twf.waypoints.action.GotoWaypointAction then
       unsorted[3][1]()
     else 
       error('Unexpected pathfinding hint in initMoveStack')
+    end
+    
+    if waypoint.orientation then 
+      turnToFace(waypoint.orientation)
     end
   end
   
@@ -1103,4 +1167,206 @@ if not twf.waypoints.action.GotoWaypointAction then
   end
   
   twf.waypoints.action.GotoWaypointAction = GotoWaypointAction
+end
+
+-----------------------------------------------------------------------------
+-- twf.waypoints.action.SaveWaypointAction
+--
+-- Saves a waypoint at the turtles current position
+-----------------------------------------------------------------------------
+if not twf.waypoints.action.SaveWaypointAction then
+  local SaveWaypointAction = {}
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action.
+  -----------------------------------------------------------------------------
+  SaveWaypointAction.logFile = nil
+  
+  -----------------------------------------------------------------------------
+  -- The name of the waypoint to save
+  -----------------------------------------------------------------------------
+  SaveWaypointAction.waypointName = nil
+  
+  -----------------------------------------------------------------------------
+  -- The id of the waypoint to save
+  -----------------------------------------------------------------------------
+  SaveWaypointAction.waypointId = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new instance of this action
+  --
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local act = twf.waypoints.action.SaveWaypointAction:new({
+  --     waypointName = 'old_spot',
+  --     waypointId = 2
+  --   })
+  --
+  -- @param o superseding object
+  -- @return  a new instance of this action
+  -- @error   if o.waypointName is not a string
+  -- @error   if o.waypointId is not a number
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if type(o.waypointName) ~= 'string' then 
+      error('Expected o.waypointName to be a string, but it is ' .. type(o.waypointName))
+    end
+    
+    if type(o.waypointId) ~= 'number' then 
+      error('Expected o.waypointId to be a number, but it is ' .. type(o.waypointId) .. '(waypointName = ' .. o.waypointName .. ')')
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Guarranteed to be called at least once before perform. The log file should
+  -- be set to all of the actions children
+  --
+  -- @param logFile file handle
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:setLogFile(logFile)
+    self.logFile = logFile
+  end
+  
+  
+  -----------------------------------------------------------------------------
+  -- Returns success after saving the waypoint with the appropriate name, id,
+  -- and the turtles current position
+  --
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.waypoints.action.SaveWaypointAction:new({
+  --     waypointName = 'start',
+  --     waypointId = 2
+  --   })
+  --   local res = act:perform(st, {})
+  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May be
+  --                    modified to save state between calls, but should not break
+  --                    serialization with textutils.serialize
+  --
+  -- @return result of this action 
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('SaveWaypointAction (waypointName = ' .. self.waypointName .. ') start')
+    local waypoint = twf.waypoints.Waypoint:new({
+      name = self.waypointName,
+      id = self.waypointId,
+      position = stateTurtle.position:clone(),
+      orientation = stateTurtle.orientation
+    })
+    
+    self.logFile.writeLine('SaveWaypointAction saving ' .. waypoint:toString())
+    pathState.waypointRegistry:addOrSetWaypoint(waypoint)
+    self.logFile.writeLine('SaveWaypointAction returning success')
+    return twf.actionpath.ActionResult.SUCCESS
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unused
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   -- prints twf.waypoints.action.SaveWaypointAction
+  --   print(twf.waypoints.action.SaveWaypointAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction.name()
+    return 'twf.waypoints.action.SaveWaypointAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local act = <omitted>
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.waypoints.action.SaveWaypointAction.unserializeObject(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:serializableObject(actionPath)
+    local resultTable = {}
+    
+    resultTable.waypointName = self.waypointName
+    resultTable.waypointId = self.waypointId
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serializableObject
+  -- 
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local act = <omitted>
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.waypoints.action.SaveWaypointAction.unserializeObject(serialized)
+  --
+  -- @param serialized the serialized object
+  -- @param actionPath the action path 
+  -- @return serialized action
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction.unserializeObject(serialized, actionPath)
+    local waypointName = serialized.waypointName
+    local waypointId = serialized.waypointId
+    
+    return SaveWaypointAction:new({
+      waypointName = waypointName,
+      waypointId = waypointId
+    })
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local act = <omitted>
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.waypoints.action.SaveWaypointAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction:serialize(actionPath)
+    return textutils.serialize(self:serializableObject(actionPath))
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_waypoints.lua')
+  --   local act = <omitted>
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.waypoints.action.SaveWaypointAction.unserialize(serialized)
+  --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path 
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function SaveWaypointAction.unserialize(serialized, actionPath)
+    return SaveWaypointAction.unserializeObject(textutils.unserialize(serialized), actionPath)
+  end
+  
+  twf.waypoints.action.SaveWaypointAction = SaveWaypointAction
 end
