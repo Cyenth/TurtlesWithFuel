@@ -32,7 +32,7 @@ if not twf.actionpath.action.Action then
   local Action = {}
   
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   Action.logFile = nil
   
@@ -595,6 +595,7 @@ if not twf.movement.StatefulTurtle.ACTIONPATH_EXTENSIONS then
         logFile.close()
         error(res)
       end
+      logFile.flush()
       actionPath:saveToFile(actionPathRecoveryFile)
       self:saveToFile()
       self:finishAction()
@@ -679,7 +680,7 @@ if not twf.actionpath.action.SequenceAction then
   local SequenceAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   SequenceAction.logFile = nil
   
@@ -834,7 +835,7 @@ if not twf.actionpath.action.SequenceAction then
   
   -----------------------------------------------------------------------------
   -- Unserializes an action serialized by this action types serializableObject
-  -- 
+  -- 
   -- Usage:
   --   dofile('twf_actionpath.lua')
   --   local act = twf.actionpath.action.SequenceAction:new()
@@ -906,7 +907,7 @@ if not twf.actionpath.action.SelectorAction then
   local SelectorAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   SelectorAction.logFile = nil
   
@@ -1131,7 +1132,7 @@ if not twf.actionpath.action.RandomSelectorAction then
   local RandomSelectorAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   RandomSelectorAction.logFile = nil
   
@@ -1393,7 +1394,7 @@ if not twf.actionpath.action.InverterAction then
   local InverterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   InverterAction.logFile = nil
   
@@ -1580,7 +1581,7 @@ if not twf.actionpath.action.SucceederAction then
   local SucceederAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   SucceederAction.logFile = nil
   
@@ -1762,7 +1763,7 @@ if not twf.actionpath.action.RepeatUntilFailureAction then
   local RepeatUntilFailureAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   RepeatUntilFailureAction.logFile = nil
   
@@ -1957,7 +1958,7 @@ if not twf.actionpath.action.RepeaterAction then
   local RepeaterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   RepeaterAction.logFile = nil
   
@@ -2173,7 +2174,7 @@ if not twf.actionpath.action.DieOnFailureAction then
   local DieOnFailureAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   DieOnFailureAction.logFile = nil
   
@@ -2365,7 +2366,7 @@ if not twf.actionpath.action.RetryOnFailureAction then
   local RetryOnFailureAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   RetryOnFailureAction.logFile = nil
   
@@ -2558,7 +2559,7 @@ if not twf.actionpath.action.MoveResultInterpreterAction then
   local MoveResultInterpreterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   MoveResultInterpreterAction.logFile = nil
   
@@ -2752,7 +2753,7 @@ if not twf.actionpath.action.DigResultInterpreterAction then
   local DigResultInterpreterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   DigResultInterpreterAction.logFile = nil
   
@@ -2949,7 +2950,7 @@ if not twf.actionpath.action.PlaceResultInterpreterAction then
   local PlaceResultInterpreterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   PlaceResultInterpreterAction.logFile = nil
   
@@ -3132,7 +3133,7 @@ if not twf.actionpath.action.DropResultInterpreterAction then
   local DropResultInterpreterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   DropResultInterpreterAction.logFile = nil
   
@@ -3315,7 +3316,7 @@ if not twf.actionpath.action.SuckResultInterpreterAction then
   local SuckResultInterpreterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   SuckResultInterpreterAction.logFile = nil
   
@@ -3501,7 +3502,7 @@ if not twf.actionpath.action.FuelCheckAction then
   local FuelCheckAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   FuelCheckAction.logFile = nil
   
@@ -3683,7 +3684,7 @@ if not twf.actionpath.action.InventoryCheckAction then
   local InventoryCheckAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   InventoryCheckAction.logFile = nil
   
@@ -4059,7 +4060,7 @@ if not twf.actionpath.action.InventorySelectAction then
   local InventorySelectAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   InventorySelectAction.logFile = nil
   
@@ -4238,7 +4239,7 @@ if not twf.actionpath.action.DropAction then
   local DropAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   DropAction.logFile = nil
   
@@ -4815,6 +4816,207 @@ if not twf.actionpath.action.DropAction then
 end
 
 -----------------------------------------------------------------------------
+-- twf.actionpath.action.FaceAction 
+-- 
+-- Faces the turtle in a particular absolute direction
+-----------------------------------------------------------------------------
+if not twf.actionpath.action.FaceAction then
+  local FaceAction = {}
+
+  -----------------------------------------------------------------------------
+  -- The log file handle for this action.
+  -----------------------------------------------------------------------------
+  FaceAction.logFile = nil
+  
+  -----------------------------------------------------------------------------
+  -- The absolute direction to face in 
+  -----------------------------------------------------------------------------
+  FaceAction.direction = nil
+  
+  -----------------------------------------------------------------------------
+  -- Creates a new instance of this FaceAction
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --
+  -- @param o superseding object
+  -- @return  a new instance of this action
+  -- @error   if o.direction is not absolute
+  -----------------------------------------------------------------------------
+  function FaceAction:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    
+    if not twf.movement.direction.isAbsolute(o.direction) then 
+      error('Expected o.direction to be an absolute direction but is ' .. tostring(o.direction))
+    end
+    
+    if o.direction == twf.movement.direction.UP or o.direction == twf.movement.direction.DOWN then 
+      error('Can\'t face ' .. twf.movement.direction.toString(o.direction))
+    end
+    
+    return o
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Sets the log file for this action and its children, if any
+  --
+  -- @param logFile the log file
+  -----------------------------------------------------------------------------
+  function FaceAction:setLogFile(logFile)
+    self.logFile = logFile
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Faces the specified direction. May take multiple turns
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local st = twf.movement.StatefulTurtle:new()
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --   local res = act:perform(st, {})
+  --
+  -- @param stateTurtle StatefulTurtle
+  -- @param pathState   an object containing the state of this actionpath. May 
+  --                    be modified to save state between calls, but should not 
+  --                    break serialization with textutils.serialize
+  -- @return result of this action 
+  -----------------------------------------------------------------------------
+  function FaceAction:perform(stateTurtle, pathState)
+    self.logFile.writeLine('FaceAction (direction = ' .. twf.movement.direction.toString(self.direction) .. ') start')
+    self.logFile.writeLine('FaceAction currently facing ' .. twf.movement.direction.toString(stateTurtle.orientation))
+    if stateTurtle.orientation == self.direction then
+      self.logFile.writeLine('FaceAction no moves necessary - returning success')
+      return twf.actionpath.ActionResult.SUCCESS 
+	  end
+    
+    local turnDir = twf.movement.direction.COUNTER_CLOCKWISE
+    if twf.movement.direction.clockwiseOf(stateTurtle.orientation) == self.direction then 
+      self.logFile.writeLine('FaceAction decided to turn clockwise')
+      turnDir = twf.movement.direction.CLOCKWISE
+    else 
+      self.logFile.writeLine('FaceAction decided to turn counterclockwise')
+    end
+    
+    self.logFile.writeLine('FaceAction creating delegate action')
+    local delegate = twf.movement.action.TurnAction:new({direction = turnDir})
+    
+    self.logFile.writeLine('FaceAction running delegate (' .. delegate.name() .. ')')
+    local res = delegate:perform(stateTurtle, pathState)
+    self.logFile.writeLine('FaceAction delegate returned ' .. twf.movement.MovementResult.toString(res))
+    
+    if twf.movement.MovementResult.isSuccess(res) then 
+      self.logFile.writeLine('FaceAction delegate returned successful move result - returning success')
+      return twf.actionpath.ActionResult.SUCCESS
+    else 
+      self.logFile.writeLine('FaceAction delegate returned failing move result - returning failure')
+      return twf.actionpath.ActionResult.FAILURE
+    end
+  end
+  
+  -----------------------------------------------------------------------------
+  -- No-op
+  -- 
+  -- @param stateTurtle the state turtle to update
+  -- @param pathState   the path state
+  -----------------------------------------------------------------------------
+  function FaceAction:updateState(stateTurtle, pathState)
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Returns a unique name for this type of action.
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   -- prints twf.actionpath.action.FaceAction
+  --   print(twf.actionpath.action.InventorySelectAction.name())
+  --
+  -- @return a unique name for this type of action.
+  -----------------------------------------------------------------------------
+  function FaceAction.name()
+    return 'twf.actionpath.action.FaceAction'
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.InventorySelectAction.unserializeObject(serialized)
+  --
+  -- @param actionPath the action path, used for serializing children
+  -- @return           string serialization of this action
+  -----------------------------------------------------------------------------
+  function FaceAction:serializableObject(actionPath)
+    local resultTable = {}
+    
+    resultTable.direction = twf.movement.direction.serializableObject(self.direction)
+    
+    return resultTable
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serializableObject
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --   local serialized = act:serializableObject(actPath)
+  --   local unserialized = twf.actionpath.action.FaceAction.unserializeObject(serialized)
+  --
+  -- @param serTable the serialized object
+  -- @param actionPath the action path 
+  -- @return serialized action
+  -----------------------------------------------------------------------------
+  function FaceAction.unserializeObject(serTable, actionPath)
+    local direction = twf.movement.direction.unserializeObject(serTable.direction)
+    
+    return FaceAction:new({direction = direction})
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Serializes this action
+  --
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.FaceAction.unserialize(serialized)
+  --
+  -- @param actionPath the action path
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function FaceAction:serialize(actionPath)
+    return textutils.serialize(self:serializableObject())
+  end
+  
+  -----------------------------------------------------------------------------
+  -- Unserializes an action serialized by this action types serialize
+  -- 
+  -- Usage:
+  --   dofile('twf_actionpath.lua')
+  --   local act = twf.actionpath.action.FaceAction:new({direction = twf.movement.direction.WEST})
+  --   local serialized = act:serialize(actPath)
+  --   local unserialized = twf.actionpath.action.FaceAction.unserialize(serialized)
+  --
+  -- @param serialized the serialized string
+  -- @param actionPath the action path
+  -- @return string serialization of this action
+  -----------------------------------------------------------------------------
+  function FaceAction.unserialize(serialized, actionPath)
+    local serTable = textutils.unserialize(serialized)
+    
+    return FaceAction.unserializeObject(serTable, actionPath)
+  end
+  
+  twf.actionpath.action.FaceAction = FaceAction
+end
+
+-----------------------------------------------------------------------------
 -- twf.actionpath.action.CounterAction
 -- 
 -- Performs actions on counters. Allows for simply loops. Counters are
@@ -4824,7 +5026,7 @@ if not twf.actionpath.action.CounterAction then
   local CounterAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   CounterAction.logFile = nil
   
@@ -5076,7 +5278,7 @@ if not twf.actionpath.action.DieAction then
   local DieAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   DieAction.logFile = nil
   
@@ -5246,12 +5448,12 @@ if not twf.actionpath.action.MessageAction then
   local MessageAction = {}
 
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   MessageAction.logFile = nil
   
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   MessageAction.logFile = nil
   

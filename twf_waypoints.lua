@@ -196,8 +196,8 @@ if not twf.waypoints.Waypoint then
   -----------------------------------------------------------------------------
   function Waypoint:toString()
     local result = 'waypoint '
-    if self.name then 
-      result = result .. self.name .. ' '
+    if self.name then  
+      result = result .. self.name.. ' '
     end
     result = result .. '(id=' .. self.id .. ') at ' .. self.position:toString()
     return result
@@ -261,12 +261,12 @@ if not twf.waypoints.Waypoint then
 end
 
 -----------------------------------------------------------------------------
--- twf.waypoint.WaypointRegistry
+-- twf.waypoints.WaypointRegistry
 --
 -- A collection of waypoints, that allows for searching by name, id, or 
 -- position. Prevents id and name collision.
 -----------------------------------------------------------------------------
-if not twf.waypoint.WaypointRegistry then 
+if not twf.waypoints.WaypointRegistry then 
   local WaypointRegistry = {}
   
   WaypointRegistry.waypoints = nil
@@ -278,7 +278,7 @@ if not twf.waypoint.WaypointRegistry then
   --   dofile('twf_maypoints.lua')
   --   local waypoints = { 
   --     twf.waypoints.Waypoint:new({
-  --       name = 'start',
+  --       waypointName = 'start',
   --       id = 1,
   --       position = twf.movement.Position:new({x = 0, y = 0, z = 0})
   --     })
@@ -538,7 +538,7 @@ if not twf.actionpath.ActionPath.WAYPOINT_EXTENSIONS then
     local saved = file.readAll()
     file.close()
     
-    self.pathState.waypointRegistry = twf.waypoint.WaypointRegistry.unserialize(saved)
+    self.pathState.waypointRegistry = twf.waypoints.WaypointRegistry.unserialize(saved)
   end
   
   
@@ -555,13 +555,20 @@ if not twf.actionpath.ActionPath.WAYPOINT_EXTENSIONS then
   -----------------------------------------------------------------------------
   local baseSerializableObject = ActionPath.serializableObject 
   function ActionPath:serializableObject()
-    local base = baseSerializableObject(self)
+    local resultTable = baseSerializableObject(self)
     
-    if base.pathState.waypointRegistry then 
-      base.pathState.waypointRegistry = base.pathState.waypointRegistry:serializableObject()
+    local resultPathState = {}
+    for key, value in pairs(resultTable.pathState) do 
+      resultPathState[key] = value
     end
     
-    return base
+    if resultPathState.waypointRegistry then
+      resultPathState.waypointRegistry = resultPathState.waypointRegistry:serializableObject()
+    end
+    
+    resultTable.pathState = resultPathState
+    
+    return resultTable
   end
   -----------------------------------------------------------------------------
   -- Unserializes an action serialized by this action types serializableObject
@@ -575,14 +582,12 @@ if not twf.actionpath.ActionPath.WAYPOINT_EXTENSIONS then
   -- @param serTable the serialized object
   -----------------------------------------------------------------------------
   local baseUnserializeObject = ActionPath.unserializeObject
-  function ActionPath.unserializeObject(serTable)
-    local result = baseUnserializeObject(serTable)
+  function ActionPath:unserializeObject(serTable)
+    baseUnserializeObject(self, serTable)
     
-    if result.pathState.waypointRegistry then 
-      result.pathState.waypointRegistry = twf.waypoint.WaypointRegistry.unserializeObject(result.pathState.waypointRegistry)
+    if self.pathState.waypointRegistry then 
+      self.pathState.waypointRegistry = twf.waypoints.WaypointRegistry.unserializeObject(self.pathState.waypointRegistry)
     end
-    
-    return result
   end
   
   ActionPath.WAYPOINT_EXTENSIONS = true
@@ -601,14 +606,14 @@ if not twf.waypoints.action then twf.waypoints.action = {} end
 if not twf.waypoints.action.GotoWaypointAction then
   local GotoWaypointAction = {}
   -----------------------------------------------------------------------------
-  -- The log file handle for this action. May be nil
+  -- The log file handle for this action.
   -----------------------------------------------------------------------------
   GotoWaypointAction.logFile = nil
   
   -----------------------------------------------------------------------------
   -- The name of the waypoint that is being gone to
   -----------------------------------------------------------------------------
-  GotoWaypointAction.name = nil
+  GotoWaypointAction.waypointName = nil
   
   -----------------------------------------------------------------------------
   -- The hints that are given to the rudimentary pathfinding algorithm. Any of 
@@ -645,14 +650,14 @@ if not twf.waypoints.action.GotoWaypointAction then
   -- Usage:
   --   dofile('twf_waypoints.lua')
   --   local act = twf.waypoints.action.GotoWaypointAction:new({
-  --     name = 'start',
+  --     waypointName = 'start',
   --     pathfindingHint = 'xyz',
   --     onObstruction = 'retry'
   --   })
   --
   -- @param o superseding object
   -- @return  a new instance of this action
-  -- @error   if o.name is not a string
+  -- @error   if o.waypointName is not a string
   -- @error   if o.pathfindingHint is not a valid string
   -- @error   if o.onObstruction is not a valid string
   -----------------------------------------------------------------------------
@@ -661,8 +666,8 @@ if not twf.waypoints.action.GotoWaypointAction then
     setmetatable(o, self)
     self.__index = self
     
-    if type(o.name) ~= 'string' then 
-      error('Expected o.name to be a string but it is ' .. type(o.name))
+    if type(o.waypointName) ~= 'string' then 
+      error('Expected o.waypointName to be a string but it is ' .. type(o.waypointName))
     end
     
     if type(o.pathfindingHint) ~= 'string' then 
@@ -670,7 +675,27 @@ if not twf.waypoints.action.GotoWaypointAction then
     end
     
     local pfHintValid = o.pathfindingHint == 'xyz' 
+    pfHintValid = pfHintValid or o.pathfindingHint == 'xzy'
     pfHintValid = pfHintValid or o.pathfindingHint == 'yxz'
+    pfHintValid = pfHintValid or o.pathfindingHint == 'yzx'
+    pfHintValid = pfHintValid or o.pathfindingHint == 'zxy'
+    pfHintValid = pfHintValid or o.pathfindingHint == 'zyx'
+    pfHintValid = pfHintValid or o.pathfindingHint == 'longestFirst'
+    pfHintValid = pfHintValid or o.pathfindingHint == 'shortestFirst'
+    
+    if not pfHintValid then 
+      error('Invalid o.pathfindingHint ' .. tostring(o.pathfindingHint))
+    end
+    
+    local onObsValid = o.onObstruction == 'fail'
+    onObsValid = onObsValid or o.onObstruction == 'retry'
+    onObsValid = onObsValid or o.onObstruction == 'dig'
+    
+    if not onObsValid then 
+      error('Invalid o.onObstruction ' .. tostring(o.onObstruction))
+    end
+    
+    return o
   end
   
   -----------------------------------------------------------------------------
@@ -681,6 +706,12 @@ if not twf.waypoints.action.GotoWaypointAction then
   -----------------------------------------------------------------------------
   function GotoWaypointAction:setLogFile(logFile)
     self.logFile = logFile
+    
+    if self.moveStack then 
+      for _, act in ipairs(self.moveStack) do 
+        act:setLogFile(logFile)
+      end
+    end
   end
   
   -----------------------------------------------------------------------------
@@ -694,32 +725,38 @@ if not twf.waypoints.action.GotoWaypointAction then
       error('Waypoint registry not loaded!')
     end
     
-    local waypoint = pathState.waypointRegistry:getByName(self.name)
+    local waypoint = pathState.waypointRegistry:getByName(self.waypointName)
     if not waypoint then 
       error('Waypoint not found!')
     end
     
     self.moveStack = {}
-    local goForward = function(times)
+    local goInDir = function(dir, times)
+      self.logFile.writeLine('GotoWaypointAction initMoveStack goInDir (dir = ' .. twf.movement.direction.toString(dir) .. ', times=' .. tostring(times) .. ') start')
+      
       local act = twf.actionpath.action.MoveResultInterpreterAction:new({
-        child = twf.movement.action.MoveAction:new({direction = twf.movement.direction.forward})
+        child = twf.movement.action.MoveAction:new({direction = dir})
       })
       
       if self.onObstruction == 'retry' then 
-        act = twf.actionpath.action.RepeatUntilFailureAction({child = 
-          twf.actionpath.action.InverterAction:new({child = act})
+        act = twf.actionpath.action.SucceederAction:new({child =
+          twf.actionpath.action.RepeatUntilFailureAction:new({child = 
+            twf.actionpath.action.InverterAction:new({child = act})
+          })
         })
       elseif self.onObstruction == 'dig' then
-        act = twf.actionpath.action.RepeatUntilFailureAction({child =                              -- until we 
-          twf.actionpath.action.InverterAction:new({                                               -- succeed
-            twf.actionpath.action.SelectorAction:new({children = {                                 -- try to 
-              act,                                                                                 -- move, but if that fails
-              twf.actionpath.action.InverterAction:new({child =                                    -- always return failure
-                twf.actionpath.action.SucceederAction:new({child =
-                  twf.inventory.action.DigAction:new({direction = twf.movement.direction.forward}) -- but try to dig 
+        act = twf.actionpath.action.SucceederAction:new({child =
+          twf.actionpath.action.RepeatUntilFailureAction:new({child =                          -- until we 
+            twf.actionpath.action.InverterAction:new({                                               -- succeed
+              twf.actionpath.action.SelectorAction:new({children = {                                 -- try to 
+                act,                                                                                 -- move, but if that fails
+                twf.actionpath.action.InverterAction:new({child =                                    -- always return failure
+                  twf.actionpath.action.SucceederAction:new({child =
+                    twf.inventory.action.DigAction:new({direction = twf.movement.direction.FORWARD}) -- but try to dig 
+                  })
                 })
-              })
-            }})
+              }})
+            })
           })
         })
       elseif self.onObstruction == 'fail' then 
@@ -727,30 +764,45 @@ if not twf.waypoints.action.GotoWaypointAction then
         error('Unknown onObstruction in goForward')
       end
       
-      act = twf.actionpath.action:Repeater:new({times = times, child = act})
-      table.insert(self.moveStack, act)
+      act = twf.actionpath.action.RepeaterAction:new({times = times, child = act})
+      act:setLogFile(self.logFile)
+      table.insert(self.moveStack, 1, act)
+      self.logFile.writeLine('GotoWaypointAction initMoveStack goInDir end')
     end
+    
+    local turtleFacing = stateTurtle.orientation
     
     local turnToFace = function(dir) 
       local direction = twf.movement.direction
       local act = nil
-      if direction.clockwiseOf(stateTurtle.orientation) == dir then 
+      self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace (dir=' .. twf.movement.direction.toString(dir) .. ') start')
+      self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace expect to be facing ' .. twf.movement.direction.toString(turtleFacing) .. ' at this point')
+      if turtleFacing == dir then 
+        self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace no turning necessary')
+        return 
+      end
+      
+      if direction.clockwiseOf(turtleFacing) == dir then 
+        self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace turning clockwise once')
         act = twf.actionpath.action.MoveResultInterpreterAction:new({child = 
           twf.movement.action.TurnAction:new({direction = direction.CLOCKWISE})
         })
-      elseif direction.counterClockwiseOf(stateTurtle.orientation) == dir then 
+      elseif direction.counterClockwiseOf(turtleFacing) == dir then 
+        self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace turning counterclockwise once')
         act = twf.actionpath.action.MoveResultInterpreterAction:new({child =
           twf.movement.action.TurnAction:new({direction = direction.COUNTER_CLOCKWISE})
         })
       else -- behind us
+        self.logFile.writeLine('GotoWaypointAction initMoveStack turnToFace turning around')
         act = twf.actionpath.action.RepeaterAction:new({times = 2, child =
           twf.actionpath.action.MoveResultInterpreterAction:new({child = 
             twf.movement.action.TurnAction:new({direction = direction.CLOCKWISE})
           })
         })
       end
-      
-      table.insert(self.moveStack, act)
+      act:setLogFile(self.logFile)
+      table.insert(self.moveStack, 1, act)
+      turtleFacing = dir
     end
     
     local goInX = function()
@@ -758,10 +810,10 @@ if not twf.waypoints.action.GotoWaypointAction then
       if dx == 0 then 
       elseif dx < 0 then
         turnToFace(twf.movement.direction.NEGATIVE_X)
-        goForward(-dx)
+        goInDir(twf.movement.direction.FORWARD, -dx)
       elseif dx > 0 then
         turnToFace(twf.movement.direction.POSITIVE_X)
-        goForward(dx)
+        goInDir(twf.movement.direction.FORWARD, dx)
       end
     end
     
@@ -769,11 +821,9 @@ if not twf.waypoints.action.GotoWaypointAction then
       local dy = waypoint.position.y - stateTurtle.position.y
       if dy == 0 then 
       elseif dy < 0 then
-        turnToFace(twf.movement.direction.NEGATIVE_Y)
-        goForward(-dy)
+        goInDir(twf.movement.direction.DOWN, -dy)
       elseif dy > 0 then
-        turnToFace(twf.movement.direction.POSITIVE_Y)
-        goForward(dx)
+        goInDir(twf.movement.direction.UP, dy)
       end
     end
     
@@ -782,10 +832,10 @@ if not twf.waypoints.action.GotoWaypointAction then
       if dz == 0 then 
       elseif dz < 0 then
         turnToFace(twf.movement.direction.NEGATIVE_Z)
-        goForward(-dz)
+        goInDir(twf.movement.direction.FORWARD, -dz)
       elseif dz > 0 then
         turnToFace(twf.movement.direction.POSITIVE_Z)
-        goForward(dz)
+        goInDir(twf.movement.direction.FORWARD, dz)
       end
     end
     
@@ -819,16 +869,16 @@ if not twf.waypoints.action.GotoWaypointAction then
       local dz = stateTurtle.position.z - waypoint.position.z
       
       local unsorted = {
-        {goInX, dx},
-        {goInY, dy},
-        {goInZ, dz}
+        {goInX, dx, 'x'},
+        {goInY, dy, 'y'},
+        {goInZ, dz, 'z'}
       }
       
       local swapped = true -- bubble sort, why not
       while swapped do 
         swapped = false
-        for i = 2, #unsorted+1 do 
-          if unsorted[i - 1][2] > unsorted[i][2] then 
+        for i = 2, #unsorted do 
+          if math.abs(unsorted[i - 1][2]) > math.abs(unsorted[i][2]) then 
             local tmp = unsorted[i]
             unsorted[i] = unsorted[i - 1]
             unsorted[i - 1] = tmp
@@ -837,6 +887,7 @@ if not twf.waypoints.action.GotoWaypointAction then
         end
       end
       
+      self.logFile.writeLine('GotoWaypointAction initMoveStack decided to do ' .. unsorted[1][3] .. unsorted[2][3] .. unsorted[3][3])
       unsorted[1][1]()
       unsorted[2][1]()
       unsorted[3][1]()
@@ -855,7 +906,7 @@ if not twf.waypoints.action.GotoWaypointAction then
       while swapped do 
         swapped = false
         for i = 2, #unsorted+1 do 
-          if unsorted[i - 1][2] < unsorted[i][2] then
+          if math.abs(unsorted[i - 1][2]) < math.abs(unsorted[i][2]) then
             local tmp = unsorted[i]
             unsorted[i] = unsorted[i - 1]
             unsorted[i - 1] = tmp
@@ -864,6 +915,7 @@ if not twf.waypoints.action.GotoWaypointAction then
         end
       end
       
+      self.logFile.writeLine('GotoWaypointAction initMoveStack decided to do ' .. unsorted[1][3] .. unsorted[2][3] .. unsorted[3][3])
       unsorted[1][1]()
       unsorted[2][1]()
       unsorted[3][1]()
@@ -880,7 +932,7 @@ if not twf.waypoints.action.GotoWaypointAction then
   --   dofile('twf_waypoints.lua')
   --   local st = twf.movement.StatefulTurtle:new()
   --   local act = twf.waypoints.action.GotoWaypointAction:new({
-  --     name = 'start', 
+  --     waypointName = 'start', 
   --     pathfindingHint = 'xyz',
   --     onObstruction = 'fail'
   --   })
@@ -894,36 +946,36 @@ if not twf.waypoints.action.GotoWaypointAction then
   -- @return result of this action 
   -----------------------------------------------------------------------------
   function GotoWaypointAction:perform(stateTurtle, pathState)
-    logFile.writeLine('GotoWaypointAction (name = ' .. self.name .. ', pathfindingHint = ' .. self.pathfindingHint .. ', onObstruction = ' .. self.onObstruction .. ') start')
+    self.logFile.writeLine('GotoWaypointAction (waypointName = ' .. self.waypointName .. ', pathfindingHint = ' .. self.pathfindingHint .. ', onObstruction = ' .. self.onObstruction .. ') start')
     
     if self.moveStack == nil then 
-      logFile.writeLine('GotoWaypointAction move stack is nil, initializing move stack')
+      self.logFile.writeLine('GotoWaypointAction move stack is nil, initializing move stack')
       self:initMoveStack(stateTurtle, pathState)
-      logFile.writeLine('GotoWaypointAction move stack initialized, returning running')
+      self.logFile.writeLine('GotoWaypointAction move stack initialized, returning running')
       return twf.actionpath.ActionResult.RUNNING
     end
     
     if #self.moveStack == 0 then
-      logFile.writeLine('GotoWaypointAction move stack is empty, returning success')
+      self.logFile.writeLine('GotoWaypointAction move stack is empty, returning success')
       self.moveStack = nil
       return twf.actionpath.ActionResult.SUCCESS
     end
     
-    logFile.writeLine('GotoWaypointAction move stack is not nil or empty, popping next action')
+    self.logFile.writeLine('GotoWaypointAction move stack is not nil or empty, popping next action')
     local pop = table.remove(self.moveStack)
     
-    logFile.writeLine('GotoWaypointAction running popped action ' .. pop.name())
+    self.logFile.writeLine('GotoWaypointAction running popped action ' .. pop.name())
     local result = pop:perform(stateTurtle, pathState)
     
     if result == twf.actionpath.ActionResult.SUCCESS then
-      logFile.writeLine('GotoWaypointAction child returned success - returning running')
+      self.logFile.writeLine('GotoWaypointAction child returned success - returning running')
       return twf.actionpath.ActionResult.RUNNING
     elseif result == twf.actionpath.ActionResult.RUNNING then
-      logFile.writeLine('GotoWaypointAction child returned running - adding back to stack and returning running')
+      self.logFile.writeLine('GotoWaypointAction child returned running - adding back to stack and returning running')
       table.insert(self.moveStack, pop)
       return twf.actionpath.ActionResult.RUNNING
     elseif result == twf.actionpath.ActionResult.FAILURE then
-      logFile.writeLine('GotoWaypointAction child returned failure - returning failure')
+      self.logFile.writeLine('GotoWaypointAction child returned failure - returning failure')
       self.moveStack = nil
       return twf.actionpath.ActionResult.FAILURE
     end
@@ -969,7 +1021,7 @@ if not twf.waypoints.action.GotoWaypointAction then
   function GotoWaypointAction:serializableObject(actionPath)
     local resultTable = {}
     
-    resultTable.name = self.name
+    resultTable.waypointName = self.waypointName
     resultTable.pathfindingHint = self.pathfindingHint
     resultTable.onObstruction = self.onObstruction
     if self.moveStack then 
@@ -997,7 +1049,7 @@ if not twf.waypoints.action.GotoWaypointAction then
   -- @return serialized action
   -----------------------------------------------------------------------------
   function GotoWaypointAction.unserializeObject(serialized, actionPath)
-    local name = serialized.name
+    local waypointName = serialized.waypointName
     local pathfindingHint = serialized.pathfindingHint
     local onObstruction = serialized.onObstruction
     local moveStack = nil
@@ -1010,7 +1062,7 @@ if not twf.waypoints.action.GotoWaypointAction then
     end
     
     return GotoWaypointAction:new({
-      name = name, 
+      waypointName = waypointName, 
       pathfindingHint = pathfindingHint, 
       onObstruction = onObstruction,
       moveStack = moveStack

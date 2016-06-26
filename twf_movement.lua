@@ -1659,7 +1659,7 @@ if not twf.movement.action then
       if self:detect() then 
         return twf.movement.MovementResult.MOVE_BLOCKED 
       elseif turtle.getFuelLevel() < 1 then
-        return twf.movement.MovementResult.NO_FUEL
+        return twf.movement.MovementResult.MOVE_NO_FUEL
       elseif self:move() then 
         return twf.movement.MovementResult.MOVE_SUCCESS
       else
